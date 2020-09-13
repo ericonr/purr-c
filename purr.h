@@ -15,6 +15,8 @@
 #define KEY_LEN 32
 #define IV_LEN br_aes_big_BLOCK_SIZE
 
+#define NO_RANDOMIZE_IV
+
 struct strip_header_info {
     FILE *output;
     char *header;
@@ -58,5 +60,8 @@ int send_and_receive(struct connection_information *);
 
 /* formats.c */
 void print_hex(uint8_t *, int);
+
+/* encrypt.c */
+int encrypt_FILE(FILE **, uint8_t **, uint8_t **, char **);
 
 #endif // __PURR_H_

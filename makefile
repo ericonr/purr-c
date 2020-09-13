@@ -2,7 +2,7 @@ CFLAGS = -O2 -g -pipe -Wall -Wextra
 LDLIBS = -lbearssl -lsbearssl -lskarnet
 
 FINAL = purr
-OBJS = purr.o socket.o urls.o files.o comm.o formats.o
+OBJS = purr.o socket.o urls.o files.o comm.o formats.o encrypt.o
 
 all: $(FINAL)
 

@@ -1,15 +1,9 @@
 #include <errno.h>
-#include <fcntl.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/random.h>
-#include <sys/mman.h>
-
-#include <sys/stat.h>
-#include <sys/types.h>
 
 #include <bearssl.h>
 #include <s6-networking/sbearssl.h>
@@ -218,8 +212,6 @@ int main (int argc, char **argv)
         {
             size_t i = num_ta;
             while(i--) sbearssl_ta_to(genalloc_s(sbearssl_ta, &ta_list) + i, btas + i, ta_content.s);
-            genalloc_free(sbearssl_ta, &ta_list);
-            stralloc_free(&ta_content);
         }
 
         br_ssl_client_init_full(&sc, &xc, btas, num_ta);
@@ -231,79 +223,8 @@ int main (int argc, char **argv)
     uint8_t *iv = NULL;
     char *temp = NULL;
     if (send && encrypt) {
-        if (input == stdin)  {
-            fputs("currently can't encrypt stdin!\n", stderr);
-            goto early_out;
-        }
-        struct stat s;
-        int errs = fstat(fileno(input), &s);
-        if (errs != 0) {
-            perror("couldn't stat output!");
-            goto early_out;
-        }
-        off_t file_size = s.st_size;
-        ssize_t blocks = file_size / br_aes_big_BLOCK_SIZE;
-        if (blocks * br_aes_big_BLOCK_SIZE < file_size) blocks++;
-        file_size = blocks * br_aes_big_BLOCK_SIZE;
-
-        key = calloc(KEY_LEN, 1);
-        iv = calloc(IV_LEN, 1);
-        if (key == NULL || iv == NULL) {
-            perror("allocation failure");
-            goto early_out;
-        }
-
-        ssize_t err = getrandom(key, KEY_LEN, 0);
-        if (err != KEY_LEN) {
-            fputs("getrandom() error!\n", stderr);
-            goto early_out;
-        }
-        err = getrandom(iv, IV_LEN, 0);
-        if (err != IV_LEN) {
-            fputs("getrandom() error!\n", stderr);
-            goto early_out;
-        }
-
-        temp = strdup("/tmp/purrito.XXXXXX");
-        int tfd = mkstemp(temp);
-        if (tfd < 0) {
-            perror("couldn't create temp file");
-            goto early_out;
-        }
-        int errfa = posix_fallocate(tfd, 0, file_size);
-        if (errfa) {
-            perror("error while fallocating");
-            goto early_out;
-        }
-        uint8_t *temp_map =
-            mmap(NULL, file_size, PROT_WRITE, MAP_SHARED, tfd, 0);
-        if (temp_map == NULL) {
-            perror("mmap failure");
-            goto early_out;
-        }
-        close(tfd);
-
-        for (ssize_t i = 0; i < blocks; i++) {
-            // zero padding for the last round
-            uint8_t tmp[br_aes_big_BLOCK_SIZE]  = { 0 };
-            fread(tmp, 1, br_aes_big_BLOCK_SIZE, output);
-            memcpy(temp_map + i * br_aes_big_BLOCK_SIZE, tmp, br_aes_big_BLOCK_SIZE);
-        }
-
-        br_aes_big_cbcenc_keys br = { 0 };
-        br_aes_big_cbcenc_init(&br, key, KEY_LEN);
-        br_aes_big_cbcenc_run(&br, iv, temp_map, file_size);
-
-        fclose(output);
-        munmap(temp_map, file_size);
-
-        output = fopen(temp, "r");
-        if (output == NULL) {
-            perror("couldn't read temp file");
-            goto early_out;
-        }
-        fstat(fileno(output), &s);
-        fprintf(stderr, "output file size: %lu\n", s.st_size);
+        // requires error checking
+        encrypt_FILE(&input, &key, &iv, &temp);
     }
 
     int socket = host_connect(link, port, debug);
