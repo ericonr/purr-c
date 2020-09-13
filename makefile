@@ -4,9 +4,17 @@ LDLIBS = -lbearssl -lsbearssl -lskarnet
 FINAL = purr
 OBJS = purr.o socket.o urls.o files.o comm.o formats.o encrypt.o
 
+TEST = tests
+TOBJS = tests.o formats.o
+
 all: $(FINAL)
 
 purr: $(OBJS)
+
+check: $(TEST)
+	./tests
+
+tests: $(TOBJS)
 
 $(OBJS): purr.h
 

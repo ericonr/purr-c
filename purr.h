@@ -59,7 +59,7 @@ size_t FILE_to_ssl(struct transmission_information);
 int send_and_receive(struct connection_information *);
 
 /* formats.c */
-void print_hex(uint8_t *, int);
+char *print_hex(uint8_t *, int, bool);
 
 /* encrypt.c */
 int encrypt_FILE(FILE **, uint8_t **, uint8_t **, char **);
