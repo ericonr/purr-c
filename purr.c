@@ -88,33 +88,42 @@ int main (int argc, char **argv)
         usage(true);
     }
 
-    FILE *input = stdin;
-    FILE *output = stdout;
+    struct mmap_file input;
+    struct mmap_file output = create_mmap_from_file(output_file, PROT_WRITE | PROT_READ);
+    if (ERROR_MMAP(output)) {
+        perror("couldn't open output file");
+        exit(EXIT_FAILURE);
+    }
+    FILE * output_print = stdout;
     char *url;
     if (recv) {
         if (argc != 2) {
             usage(true);
         }
         if (output_file && strcmp(output_file, "-")) {
-            output = fopen(output_file, "w");
-            if (output == NULL) {
+            output_print = fopen(output_file, "w");
+            if (output_print == NULL) {
                 perror("couldn't open output file");
                 exit(EXIT_FAILURE);
             }
         }
+
         if (url_opt) {
             fputs("discarding url...\n", stderr);
         }
         url = argv[1];
     } else if (send) {
         if (argc == 2 && strcmp(argv[1], "-")) {
-            input = fopen(argv[1], "r");
-            if (input == NULL) {
+            input = create_mmap_from_file(argv[1], PROT_READ);
+            if (ERROR_MMAP(input)) {
                 perror("couln't open input file");
                 exit(EXIT_FAILURE);
             }
         } else if (argc > 2) {
             usage(true);
+        } else {
+            fputs("stdin not supported for now!\n", stderr);
+            exit(EXIT_FAILURE);
         }
 
         if (url_opt) {
@@ -164,8 +173,6 @@ int main (int argc, char **argv)
                            "\r\n",
                            path, link);
     } else if (send) {
-        struct stat st;
-        fstat(fileno(input), &st);
         if (port_opt) {
             strncpy(port, port_opt, 16);
         } else if (url_opt == NULL) {
@@ -180,7 +187,7 @@ int main (int argc, char **argv)
                            "Content-Length: %lu\r\n"
                            "Content-Type: application/x-www-form-urlencoded\r\n"
                            "\r\n",
-                           path, link, port, st.st_size);
+                           path, link, port, input.size);
     }
     if (written >= going_to_write) {
         fputs("warning: truncated request!\n", stderr);
@@ -223,7 +230,11 @@ int main (int argc, char **argv)
     uint8_t *iv = NULL;
     if (send && encrypt) {
         // requires error checking
-        encrypt_FILE(&input, &key, &iv);
+        input = encrypt_mmap(input, &key, &iv);
+        if(ERROR_MMAP(input)) {
+            rv = EXIT_FAILURE;
+            goto early_out;
+        }
     }
 
     int socket = host_connect(link, port, debug);
@@ -237,13 +248,16 @@ int main (int argc, char **argv)
     struct connection_information ci =
         {.ioc = &ioc, .sc = &sc,
          .request = request, .request_size = written,
-         .input = input, .output = output,
+         .input = &input, .output = &output,
          .socket = socket,
          .send = send, .ssl = (portn == HTTPS_PORT),
          .no_strip = no_strip, .debug = debug};
 
     rv = send_and_receive(&ci);
 
+    if (fwrite(output.data, 1, output.offset, output_print) < output.offset) {
+        fputs("might not have written all data\n", stderr);
+    }
     if (encrypt) {
         print_hex(key, KEY_LEN, true);
     }
@@ -257,8 +271,8 @@ int main (int argc, char **argv)
     free(key);
     free(iv);
   early_out:
-    if (input != stdin) fclose(input);
-    if (output != stdout) fclose(output);
+    CLOSE_MMAP(input);
+    CLOSE_MMAP(output);
 
     return rv;
 }

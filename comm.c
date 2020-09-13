@@ -24,7 +24,7 @@ int send_and_receive(struct connection_information *ci)
     }
 
     if (ci->send) {
-        size_t sent = FILE_to_ssl(ti);
+        size_t sent = mmap_to_ssl(ti);
         if (sent == 0) {
             fputs("warning: empty input file...\n", stderr);
         }
@@ -36,7 +36,7 @@ int send_and_receive(struct connection_information *ci)
 
     ti.file = ci->output;
 
-    if (ssl_to_FILE(ti) == 0) {
+    if (ssl_to_mmap(ti) == 0) {
         fputs("warning: empty response...\n", stderr);
     }
 

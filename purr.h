@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <sys/mman.h>
 
 #include <bearssl.h>
 
@@ -12,24 +13,23 @@
 
 #define HEADER_MAX_LEN 8192
 
+#define NET_BLOCK_SIZE 512
+
 #define KEY_LEN 32
 #define IV_LEN br_aes_big_BLOCK_SIZE
 
 #define NO_RANDOMIZE_IV
 
-struct strip_header_info {
-    FILE *output;
-    char *header;
-    int counter, header_counter;
-    bool no_strip, debug;
-};
+#define RESET_MMAP(file) do{file.offset = 0; file.cursor = 0}while(0);
+#define ERROR_MMAP(file) (file.data == MAP_FAILED || file.data == NULL)
+#define CLOSE_MMAP(file) do{if(file.data != MAP_FAILED && file.data != NULL) munmap(file.data, file.size);}while(0);
 
 struct connection_information {
     br_sslio_context *ioc;
     br_ssl_client_context *sc;
     const char *request;
     size_t request_size;
-    FILE *input, *output;
+    struct mmap_file *input, *output;
     int socket;
     bool send, ssl;
     bool no_strip, debug;
@@ -37,9 +37,15 @@ struct connection_information {
 
 struct transmission_information {
     br_sslio_context *ioc;
-    FILE *file;
+    struct mmap_file *file;
     int socket;
     bool no_strip, debug, ssl;
+};
+
+struct mmap_file {
+    uint8_t *data, *cursor;
+    off_t size, offset;
+    int prot, flags;
 };
 
 /* sockets.c */
@@ -51,9 +57,11 @@ int clean_up_link(const char *, char *, char *, char *);
 int host_connect(const char *, const char *, bool);
 
 /* files.c */
-size_t fwrite_strip(const uint8_t *, int, struct strip_header_info *);
-size_t ssl_to_FILE(struct transmission_information);
-size_t FILE_to_ssl(struct transmission_information);
+struct mmap_file create_mmap_from_file(const char *, int);
+int read_from_mmap(struct mmap_file *, int);
+int write_into_mmap(struct mmap_file *, const uint8_t *, int);
+size_t ssl_to_mmap(struct transmission_information);
+size_t mmap_to_ssl(struct transmission_information);
 
 /* comm.c */
 int send_and_receive(struct connection_information *);
@@ -62,6 +70,6 @@ int send_and_receive(struct connection_information *);
 char *print_hex(uint8_t *, int, bool);
 
 /* encrypt.c */
-int encrypt_FILE(FILE **, uint8_t **, uint8_t **);
+struct mmap_file encrypt_mmap(struct mmap_file, uint8_t **, uint8_t **);
 
 #endif // __PURR_H_
