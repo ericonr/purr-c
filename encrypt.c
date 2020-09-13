@@ -154,5 +154,9 @@ struct mmap_file decrypt_mmap(struct mmap_file file, const uint8_t *key, const u
     br_aes_big_cbcdec_run(&br, iv_throwaway, rv.data, rv.size);
     free(iv_throwaway);
 
+    // kinda hacky, but not sure how to determine where padding starts otherwise
+    // TODO: look only at last block, perhaps?
+    rv.size = strlen(rv.data);
+
     return rv;
 }
