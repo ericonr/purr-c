@@ -1,5 +1,6 @@
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -53,6 +54,58 @@ int clean_up_link(const char *dirty, char *clean, char *path, char *port)
     sprintf(port, "%d", portn);
 
     return portn;
+}
+
+#define MALFORM_ERROR(p) do{if((p) == NULL || (p)[1] == 0) {fputs("get_encryption_params(): malformed URL\n", stderr); return rv;}}while(0);
+
+int get_encryption_params(char *path, uint8_t **keyp, uint8_t **ivp)
+{
+    int rv = -1;
+    // parse path in format: "/paste.html#<actual_path>_<key>[_<iv>]"
+    // will update path to point to the proper piece
+    uint8_t *key = calloc(KEY_LEN, 1);
+    uint8_t *iv = calloc(IV_LEN, 1);
+    char *path_temp = calloc(strlen(path), 1);
+    if (key == NULL || iv == NULL || path_temp == NULL) {
+        perror("calloc()");
+        return rv;
+    }
+    *keyp = key;
+    *ivp = iv;
+
+    char *hash = strchr(path, '#');
+    MALFORM_ERROR(hash);
+    char *underscore = strchr(hash + 1, '_');
+    MALFORM_ERROR(underscore);
+    underscore[0] = 0;
+
+    sprintf(path_temp, "/%s", hash + 1);
+
+    char *key_start = underscore + 1;
+    underscore = strchr(key_start, '_');
+    MALFORM_ERROR(underscore);
+    underscore[0] = 0;
+    char *iv_start = underscore + 1;
+
+    size_t key_s_len = strlen(key_start), iv_s_len = strlen(iv_start);
+    // odd number of chars is an error, as well as being too big
+    if (key_s_len & 1 || iv_s_len & 1 || key_s_len / 2 > KEY_LEN || iv_s_len / 2 > IV_LEN) {
+        fputs("get_encryption_params(): malformed KEY and/or IV input\n", stderr);
+        return rv;
+    }
+
+    int err = decode_hex(key_start, key, key_s_len / 2)
+        | decode_hex(iv_start, iv, iv_s_len / 2);
+    if (err) {
+        fputs("get_encryption_params(): malformed KEY and/or IV input\n", stderr);
+        return rv;
+    }
+
+    strcpy(path, path_temp);
+    free(path_temp);
+
+    rv = 0;
+    return rv;
 }
 
 int host_connect(const char *host, const char *port, bool debug)

@@ -55,6 +55,7 @@ int socket_write(void *, const uint8_t *, size_t);
 
 /* urls.c */
 int clean_up_link(const char *, char *, char *, char *);
+int get_encryption_params(char *, uint8_t **, uint8_t **);
 int host_connect(const char *, const char *, bool);
 
 /* files.c */
@@ -68,7 +69,8 @@ size_t mmap_to_ssl(struct transmission_information);
 int send_and_receive(struct connection_information *);
 
 /* formats.c */
-char *print_hex(uint8_t *, int, bool);
+char *print_hex(const uint8_t *, int, bool);
+int decode_hex(const char *, uint8_t *, int);
 
 /* encrypt.c */
 struct mmap_file encrypt_mmap(struct mmap_file, uint8_t **, uint8_t **);

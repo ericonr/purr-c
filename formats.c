@@ -6,7 +6,7 @@
 /*
  * Set print to true to print value, otherwise returns dynamic string with the number
  */
-char *print_hex(uint8_t *buf, int len, bool print)
+char *print_hex(const uint8_t *buf, int len, bool print)
 {
     char *rv = NULL;
 
@@ -36,6 +36,38 @@ char *print_hex(uint8_t *buf, int len, bool print)
     return rv;
 }
 
-// TODO:
-// buffer to base64
-// base64 to buffer
+static bool is_hex_char(char c)
+{
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+}
+
+// from https://lemire.me/blog/2019/04/17/parsing-short-hexadecimal-strings-efficiently/
+static uint32_t convert_hex_char(uint8_t c) {
+    return (c & 0xF) + 9 * (c >> 6);
+}
+
+static uint8_t assemble_u8(const char *cs)
+{
+    uint8_t rv = 0;
+    for (int i = 0; i < 2; i++) {
+        int index = !i;
+        rv |= convert_hex_char(cs[i]) << (4 * index);
+    }
+    return rv;
+}
+
+int decode_hex(const char *s, uint8_t *output, int len)
+{
+    for (int i = 0; i < len; i++) {
+        int j = i * 2;
+        int k = j + 1;
+
+        if (is_hex_char(s[j]) && is_hex_char(s[k])) {
+            output[i] = assemble_u8(s + j);
+        } else {
+            return -1;
+        }
+    }
+
+    return 0;
+}
