@@ -62,6 +62,6 @@ int send_and_receive(struct connection_information *);
 char *print_hex(uint8_t *, int, bool);
 
 /* encrypt.c */
-int encrypt_FILE(FILE **, uint8_t **, uint8_t **, char **);
+int encrypt_FILE(FILE **, uint8_t **, uint8_t **);
 
 #endif // __PURR_H_

@@ -7,14 +7,38 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "libbaseencode/baseencode.h"
+
 #include "purr.h"
 
-int encrypt_FILE(FILE **filep, uint8_t **keyp, uint8_t **ivp, char **tempp)
+#define MAX_FILES 32
+static char *files_to_delete[32] = { 0 };
+
+static bool called_atexit = false;
+
+static void clean_up_files(void)
 {
+    for (int i = 0; i < MAX_FILES && files_to_delete[i]; i++) {
+        unlink(files_to_delete[i]);
+        free(files_to_delete[i]);
+    }
+}
+
+/*
+ * This function takes a FILE pointer, and creates an encrypted file from it.
+ * The created file is passed to an atexit function so it can be deleted automatically.
+ * Args:
+ *   filep: original FILE pointer, will be closed and changed for the new encrypted FILE
+ *   keyp: will receive the newly generated random key
+ *   ivp: will receive the newly generated random IV (if enabled in purr.h)
+ */
+int encrypt_FILE(FILE **filep, uint8_t **keyp, uint8_t **ivp)
+{
+    if (!called_atexit) {
+        atexit(clean_up_files);
+    }
+
     FILE *input = *filep;
-    uint8_t *key  = *keyp;
-    uint8_t *iv = *ivp;
-    char *temp = *tempp;
 
     if (input == stdin)  {
         fputs("currently can't encrypt stdin!\n", stderr);
@@ -31,8 +55,8 @@ int encrypt_FILE(FILE **filep, uint8_t **keyp, uint8_t **ivp, char **tempp)
     if (blocks * br_aes_big_BLOCK_SIZE < file_size) blocks++;
     file_size = blocks * br_aes_big_BLOCK_SIZE;
 
-    key = calloc(KEY_LEN, 1);
-    iv = calloc(IV_LEN, 1);
+    uint8_t *key = calloc(KEY_LEN, 1);
+    uint8_t *iv = calloc(IV_LEN, 1);
     if (key == NULL || iv == NULL) {
         perror("allocation failure");
         return -1;
@@ -52,11 +76,20 @@ int encrypt_FILE(FILE **filep, uint8_t **keyp, uint8_t **ivp, char **tempp)
     }
     #endif
 
-    temp = strdup("/tmp/purrito.XXXXXX");
+    char temp[] = "/tmp/purrito.XXXXXX";
     int tfd = mkstemp(temp);
     if (tfd < 0) {
         perror("couldn't create temp file");
         return -1;
+    } else {
+        // add cleanup for file
+        int i = 0;
+        for (; i < MAX_FILES && files_to_delete[i]; i++);
+        if (i == MAX_FILES) {
+            fputs("couldn't add file to files_to_delete\n", stderr);
+        } else {
+            files_to_delete[i] = strdup(temp);
+        }
     }
     int errfa = posix_fallocate(tfd, 0, file_size);
     if (errfa) {
@@ -85,13 +118,14 @@ int encrypt_FILE(FILE **filep, uint8_t **keyp, uint8_t **ivp, char **tempp)
     fclose(input);
     munmap(temp_map, file_size);
 
-    input = fopen(temp, "r");
+    // pass pointers to caller
+    *filep = fopen(temp, "r");
     if (input == NULL) {
         perror("couldn't read temp file");
         return -1;
     }
-    fstat(fileno(input), &s);
-    fprintf(stderr, "output file size: %lu\n", s.st_size);
+    *keyp  = key;
+    *ivp = iv;
 
     return 0;
 }

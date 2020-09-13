@@ -221,10 +221,9 @@ int main (int argc, char **argv)
 
     uint8_t *key = NULL;
     uint8_t *iv = NULL;
-    char *temp = NULL;
     if (send && encrypt) {
         // requires error checking
-        encrypt_FILE(&input, &key, &iv, &temp);
+        encrypt_FILE(&input, &key, &iv);
     }
 
     int socket = host_connect(link, port, debug);
@@ -245,6 +244,10 @@ int main (int argc, char **argv)
 
     rv = send_and_receive(&ci);
 
+    if (encrypt) {
+        print_hex(key, KEY_LEN, true);
+    }
+
   //out:
     close(socket);
     free(link);
@@ -253,7 +256,6 @@ int main (int argc, char **argv)
     free(request);
     free(key);
     free(iv);
-    free(temp);
   early_out:
     if (input != stdin) fclose(input);
     if (output != stdout) fclose(output);
