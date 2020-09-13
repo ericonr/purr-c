@@ -18,7 +18,7 @@
 #define KEY_LEN 32
 #define IV_LEN br_aes_big_BLOCK_SIZE
 
-#define NO_RANDOMIZE_IV
+#define RANDOMIZE_IV
 #define ENCODE_BASE_64
 
 #define RESET_MMAP(file) do{(file).offset = 0; (file).cursor = 0}while(0);

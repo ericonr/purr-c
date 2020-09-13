@@ -38,18 +38,19 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
     }
 
     ssize_t err = getrandom(key, KEY_LEN, 0);
+    //ssize_t err = KEY_LEN;
     if (err != KEY_LEN) {
         fputs("getrandom() error!\n", stderr);
         return rv;
     }
-    #ifndef NO_RANDOMIZE_IV
+    #ifdef RANDOMIZE_IV
     err = getrandom(iv, IV_LEN, 0);
     memcpy(iv_throwaway, iv, IV_LEN);
     if (err != IV_LEN) {
         fputs("getrandom() error!\n", stderr);
         return rv;
     }
-    #endif /* NO_RANDOMIZE_IV */
+    #endif /* RANDOMIZE_IV */
 
     rv.data = mmap(NULL, rv.size, rv.prot, rv.flags, -1, 0);
     if (ERROR_MMAP(rv)) {
