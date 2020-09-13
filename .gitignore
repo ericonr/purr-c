@@ -1,3 +1,4 @@
 purr
 tests
 *.o
+*.a

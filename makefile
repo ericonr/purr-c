@@ -1,6 +1,10 @@
-CFLAGS = -O2 -g -pipe -Wall -Wextra
+INC = -Iextern
+CFLAGS = -O2 -g -pipe -Wall -Wextra $(INC)
 LDLIBS = -lbearssl -lsbearssl -lskarnet
 LDFLAGS = -Wl,--as-needed
+
+BASEENCODE = extern/libbaseencode/baseencode.a
+LIBS = $(BASEENCODE)
 
 FINAL = purr
 OBJS = purr.o socket.o urls.o files.o comm.o formats.o encrypt.o
@@ -10,14 +14,16 @@ TOBJS = tests.o formats.o urls.o
 
 all: $(FINAL)
 
-purr: $(OBJS)
-
 check: $(TEST)
 	./tests
 
-tests: $(TOBJS)
-
 $(OBJS): purr.h
+purr: $(OBJS) $(LIBS)
+tests: $(TOBJS) $(LIBS)
+
+$(BASEENCODE):
+	make -C extern/libbaseencode
 
 clean:
 	rm -f $(FINAL) $(OBJS) $(TEST) $(TOBJS)
+	make -C extern/libbaseencode clean
