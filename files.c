@@ -40,8 +40,6 @@ struct mmap_file create_mmap_from_file(const char *name, int prot)
         }
         rv.size = st.st_size;
     } else if (prot == PROT_WRITE) {
-        // TODO: how to deal with file size here?
-        // fallocate can fail in ugly ways
         fd = open(name, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
         rv.flags = MAP_PRIVATE;
 
@@ -49,9 +47,10 @@ struct mmap_file create_mmap_from_file(const char *name, int prot)
             return rv;
         }
 
-        int errfa = posix_fallocate(fd, 0, OUTPUT_FILE_SIZE);
-        if (errfa) {
-            errno = errfa;
+        // ftruncate is good enough for now
+        // TODO: we can truncate again once we know the content-size,
+        // otherwise this will leave the file with the wrong size
+        if (0 && ftruncate(fd, OUTPUT_FILE_SIZE) == -1) {
             return rv;
         }
         rv.size = OUTPUT_FILE_SIZE;
@@ -110,7 +109,7 @@ int write_into_mmap(struct mmap_file *file, const uint8_t *buffer, int n)
         n = max;
     }
 
-    memcpy(file->data, buffer, n);
+    memcpy(file->cursor, buffer, n);
     file->cursor = file->data + file->offset;
 
     return n;
@@ -138,7 +137,7 @@ static size_t fwrite_strip(const uint8_t *buf, int rlen, struct strip_header_inf
 
             if (st->header_counter < HEADER_MAX_LEN - 1) {
                 // protect from buffer overflow
-                // the header buffer is calloc'd, so no need to terminate it manually
+                // the header buffer is calloc'd, so no need to null-terminate it manually
                 st->header[st->header_counter++] = buf[i];
             }
 
