@@ -71,7 +71,7 @@ base64_encode(const unsigned char *user_data, size_t data_len, baseencode_error_
 
 
 unsigned char *
-base64_decode(const char *user_data_untrimmed, size_t data_len, baseencode_error_t *err)
+base64_decode(const char *user_data_untrimmed, size_t data_len, baseencode_error_t *err, size_t *output_len)
 {
     baseencode_error_t error;
     check_input((unsigned char *)user_data_untrimmed, data_len, MAX_DECODE_BASE64_INPUT_LEN, &error);
@@ -130,6 +130,7 @@ base64_decode(const char *user_data_untrimmed, size_t data_len, baseencode_error
     free(user_data);
 
     *err = SUCCESS;
+    *output_len = output_length;
     return decoded_data;
 }
 

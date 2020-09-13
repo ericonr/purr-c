@@ -162,6 +162,12 @@ int main (int argc, char **argv)
             rv = EXIT_FAILURE;
             goto early_out;
         }
+    } else if (recv && encrypt) {
+        int err = get_encryption_params(path, &key, &iv);
+        if (err) {
+            fputs("get_encription_params(): error decoding url\n", stderr);
+            goto early_out;
+        }
     }
 
     // TODO: fix size
@@ -255,8 +261,8 @@ int main (int argc, char **argv)
 
     rv = send_and_receive(&ci);
 
-    if (encrypt) {
-        size_t allocate_res = strlen((char *)output.data);
+    if (send && encrypt) {
+        size_t allocate_res = strlen((char *)output.data) + 1;
         char *link_res = calloc(allocate_res, 1);
         char *path_res = calloc(allocate_res, 1);
         char *port_res = calloc(16, 1);
@@ -279,14 +285,18 @@ int main (int argc, char **argv)
             goto early_out;
         }
 
-        fprintf(output_print, "%s/paste.html#%s_%s_%s",
-                url, path_res + 1, key_s, iv_s);
+        // TODO: fix hack for https link
+        fprintf(output_print, "https://%s/paste.html#%s_%s_%s",
+                link_res, path_res + 1, key_s, iv_s);
 
         free(link_res);
         free(path_res);
         free(port_res);
         free(key_s);
         free(iv_s);
+    } else if (recv && encrypt) {
+        output = decrypt_mmap(output, key, iv);
+        fwrite(output.data, 1, output.size, output_print);
     } else if (fwrite(output.data, 1, output.offset, output_print) < output.offset) {
         fputs("might not have written all data\n", stderr);
     }
@@ -299,7 +309,8 @@ int main (int argc, char **argv)
     free(request);
     free(key);
     free(iv);
-  early_out:
+early_out:
+    if (output_print != stdout) fclose(output_print);
     CLOSE_MMAP(input);
     CLOSE_MMAP(output);
 

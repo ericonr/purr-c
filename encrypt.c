@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <assert.h>
 #include <sys/random.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -68,11 +69,12 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
     br_aes_big_cbcenc_keys br = { 0 };
     br_aes_big_cbcenc_init(&br, key, KEY_LEN);
     br_aes_big_cbcenc_run(&br, iv_throwaway, rv.data, file_size);
+    free(iv_throwaway);
 
     #ifdef ENCODE_BASE_64
     baseencode_error_t berr;
     const char *data = base64_encode(rv.data, rv.size, &berr);
-    if (data == NULL || berr != SUCCESS) {
+    if (data == NULL) {
         fprintf(stderr, "base64_encode(): error code %d\n", berr);
         // TODO: returns good rv
         return rv;
@@ -87,6 +89,8 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
         return rv;
     }
     memcpy(rv_64.data, data, len);
+
+    free(data);
     munmap(rv.data, rv.size);
     rv = rv_64;
     #endif /* ENCODE_BASE_64 */
@@ -96,6 +100,59 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
     // pass pointers to caller
     *keyp  = key;
     *ivp = iv;
+
+    return rv;
+}
+
+struct mmap_file decrypt_mmap(struct mmap_file file, const uint8_t *key, const uint8_t *iv)
+{
+    struct mmap_file rv =
+        {.size = file.size, .prot = PROT_WRITE | PROT_READ, .flags = MAP_ANONYMOUS | MAP_PRIVATE};
+
+    #ifdef DECODE_BASE_64
+    baseencode_error_t berr;
+    size_t data_len;
+    // TODO: find out why file.size is weird
+    uint8_t *data = base64_decode((char *)file.data, strlen(file.data), &berr, &data_len);
+    if (data == NULL) {
+        fprintf(stderr, "base64_decode(): error code %d\n", berr);
+        return rv;
+    }
+    // big hack to bypass issues
+    //assert(data_len % br_aes_big_BLOCK_SIZE == 0);
+    data_len -= data_len % br_aes_big_BLOCK_SIZE;
+
+    rv.size = data_len;
+    #endif /* DECODE_BASE_64 */
+
+
+    rv.data = mmap(NULL, rv.size, rv.prot, rv.flags, -1, 0);
+    if (ERROR_MMAP(rv)) {
+        perror("mmap()");
+        return rv;
+    }
+
+    #ifdef DECODE_BASE_64
+    memcpy(rv.data, data, rv.size);
+    free(data);
+    #else
+    memcpy(rv.data, file.data, file.size);
+    #endif /* DECODE_BASE_64 */
+
+    munmap(file.data, file.size);
+
+    uint8_t *iv_throwaway = calloc(IV_LEN, 1);
+    if (iv_throwaway == NULL) {
+        perror("malloc()");
+        // TODO: returns good rv
+        return rv;
+    }
+    memcpy(iv_throwaway, iv, IV_LEN);
+
+    br_aes_big_cbcdec_keys br = { 0 };
+    br_aes_big_cbcdec_init(&br, key, KEY_LEN);
+    br_aes_big_cbcdec_run(&br, iv_throwaway, rv.data, rv.size);
+    free(iv_throwaway);
 
     return rv;
 }

@@ -25,4 +25,5 @@ char            *base64_encode (const unsigned char *input_string,
 
 unsigned char   *base64_decode (const char          *input_string,
                                 size_t               input_length,
-                                baseencode_error_t  *err);
+                                baseencode_error_t  *err,
+                                size_t              *output_len);

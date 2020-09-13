@@ -20,6 +20,7 @@
 
 #define RANDOMIZE_IV
 #define ENCODE_BASE_64
+#define DECODE_BASE_64
 
 #define RESET_MMAP(file) do{(file).offset = 0; (file).cursor = 0}while(0);
 #define ERROR_MMAP(file) ((file).data == MAP_FAILED || (file).data == NULL)
@@ -74,5 +75,6 @@ int decode_hex(const char *, uint8_t *, int);
 
 /* encrypt.c */
 struct mmap_file encrypt_mmap(struct mmap_file, uint8_t **, uint8_t **);
+struct mmap_file decrypt_mmap(struct mmap_file, const uint8_t *, const uint8_t *);
 
 #endif // __PURR_H_
