@@ -26,17 +26,9 @@ base64_encode(const unsigned char *user_data, size_t data_len, baseencode_error_
         }
     }
 
-    size_t user_data_chars = 0, total_bits = 0;
+    size_t user_data_chars = data_len;
+    size_t total_bits = user_data_chars * 8;
     int num_of_equals = 0;
-    for (int i = 0; i < data_len; i++) {
-        // As it's not known whether data_len is with or without the +1 for the null byte, a manual check is required.
-        if (user_data[i] != '\0') {
-            total_bits += 8;
-            user_data_chars += 1;
-        } else {
-            break;
-        }
-    }
     switch (total_bits % 24) {
         case 8:
             num_of_equals = 2;

@@ -26,7 +26,8 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
     if (blocks * br_aes_big_BLOCK_SIZE < file_size) blocks++;
     file_size = blocks * br_aes_big_BLOCK_SIZE;
 
-    struct mmap_file rv = {.size = file_size, .prot = PROT_WRITE | PROT_READ, .flags = MAP_ANONYMOUS | MAP_PRIVATE};
+    struct mmap_file rv =
+        {.size = file_size, .prot = PROT_WRITE | PROT_READ, .flags = MAP_ANONYMOUS | MAP_PRIVATE};
 
     uint8_t *key = calloc(KEY_LEN, 1);
     uint8_t *iv = calloc(IV_LEN, 1);
@@ -48,12 +49,11 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
         fputs("getrandom() error!\n", stderr);
         return rv;
     }
-    #endif
+    #endif /* NO_RANDOMIZE_IV */
 
-    rv.data =
-        mmap(NULL, rv.size, rv.prot, rv.flags, -1, 0);
-    if (rv.data == MAP_FAILED) {
-        perror("mmap failure");
+    rv.data = mmap(NULL, rv.size, rv.prot, rv.flags, -1, 0);
+    if (ERROR_MMAP(rv)) {
+        perror("mmap()");
         return rv;
     }
 
@@ -67,6 +67,28 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
     br_aes_big_cbcenc_keys br = { 0 };
     br_aes_big_cbcenc_init(&br, key, KEY_LEN);
     br_aes_big_cbcenc_run(&br, iv_throwaway, rv.data, file_size);
+
+    #ifdef ENCODE_BASE_64
+    baseencode_error_t berr;
+    const char *data = base64_encode(rv.data, rv.size, &berr);
+    if (data == NULL || berr != SUCCESS) {
+        fprintf(stderr, "base64_encode(): error code %d\n", berr);
+        // TODO: returns good rv
+        return rv;
+    }
+    size_t len = strlen(data);
+    struct mmap_file rv_64 =
+        {.size = len, .prot = PROT_WRITE | PROT_READ, .flags = MAP_ANONYMOUS | MAP_PRIVATE};
+    rv_64.data = mmap(NULL, rv_64.size, rv_64.prot, rv_64.flags, -1, 0);
+    if (ERROR_MMAP(rv_64)) {
+        perror("mmap()");
+        // TODO: returns good rv
+        return rv;
+    }
+    memcpy(rv_64.data, data, len);
+    munmap(rv.data, rv.size);
+    rv = rv_64;
+    #endif /* ENCODE_BASE_64 */
 
     munmap(file.data, file.size);
 

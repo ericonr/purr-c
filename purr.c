@@ -153,6 +153,17 @@ int main (int argc, char **argv)
         goto early_out;
     }
 
+    uint8_t *key = NULL;
+    uint8_t *iv = NULL;
+    if (send && encrypt) {
+        // requires error checking
+        input = encrypt_mmap(input, &key, &iv);
+        if(ERROR_MMAP(input)) {
+            rv = EXIT_FAILURE;
+            goto early_out;
+        }
+    }
+
     // TODO: fix size
     const int going_to_write = HEADER_MAX_LEN;
     char *request = calloc(going_to_write, 1);
@@ -226,17 +237,6 @@ int main (int argc, char **argv)
         br_ssl_client_reset(&sc, link, 0);
     }
 
-    uint8_t *key = NULL;
-    uint8_t *iv = NULL;
-    if (send && encrypt) {
-        // requires error checking
-        input = encrypt_mmap(input, &key, &iv);
-        if(ERROR_MMAP(input)) {
-            rv = EXIT_FAILURE;
-            goto early_out;
-        }
-    }
-
     int socket = host_connect(link, port, debug);
     // avoid crashing on socket release
     signal(SIGPIPE, SIG_IGN);
@@ -255,11 +255,40 @@ int main (int argc, char **argv)
 
     rv = send_and_receive(&ci);
 
-    if (fwrite(output.data, 1, output.offset, output_print) < output.offset) {
-        fputs("might not have written all data\n", stderr);
-    }
     if (encrypt) {
-        print_hex(key, KEY_LEN, true);
+        size_t allocate_res = strlen((char *)output.data);
+        char *link_res = calloc(allocate_res, 1);
+        char *path_res = calloc(allocate_res, 1);
+        char *port_res = calloc(16, 1);
+        if (link_res == NULL || path_res == NULL || port_res == NULL) {
+            perror("allocation failure");
+            exit(EXIT_FAILURE);
+        }
+        clean_up_link((char *)output.data, link_res, path_res, port_res);
+
+        // clean up linebreak
+        char *linebreak = strchr(path_res, '\n');
+        if(linebreak) {
+            *linebreak = 0;
+        }
+
+        char *key_s = print_hex(key, KEY_LEN, false);
+        char *iv_s = print_hex(iv, IV_LEN, false);
+        if (key_s == NULL || iv_s == NULL) {
+            perror("malloc()");
+            goto early_out;
+        }
+
+        fprintf(output_print, "%s/paste.html#%s_%s_%s",
+                url, path_res + 1, key_s, iv_s);
+
+        free(link_res);
+        free(path_res);
+        free(port_res);
+        free(key_s);
+        free(iv_s);
+    } else if (fwrite(output.data, 1, output.offset, output_print) < output.offset) {
+        fputs("might not have written all data\n", stderr);
     }
 
   //out:

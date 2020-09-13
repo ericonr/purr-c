@@ -102,6 +102,7 @@ int write_into_mmap(struct mmap_file *file, const uint8_t *buffer, int n)
     }
 
     ssize_t max = file->size - file->offset;
+    file->cursor = file->data + file->offset;
     if (n < max) {
         file->offset += n;
     } else {
@@ -110,7 +111,6 @@ int write_into_mmap(struct mmap_file *file, const uint8_t *buffer, int n)
     }
 
     memcpy(file->cursor, buffer, n);
-    file->cursor = file->data + file->offset;
 
     return n;
 }
