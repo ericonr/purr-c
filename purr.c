@@ -7,10 +7,10 @@
 #include <unistd.h>
 
 #include <bearssl.h>
-#include <s6-networking/sbearssl.h>
 
 #include "purr.h"
 #include "mmap_file.h"
+#include "read_certs.h"
 
 __attribute__ ((noreturn))
 static void usage(bool fail)
@@ -248,9 +248,6 @@ int main (int argc, char **argv)
         fputs("-----------------------------\n", stderr);
     }
 
-    // TODO: use only bearssl
-    genalloc ta_list = GENALLOC_ZERO;
-    stralloc ta_content = STRALLOC_ZERO;
     size_t num_ta;
     br_x509_trust_anchor *btas;
 
@@ -263,14 +260,12 @@ int main (int argc, char **argv)
         if (debug) {
             fputs("reading certs...\n", stderr);
         }
-        sbearssl_ta_readdir("/usr/share/ca-certificates/mozilla", &ta_list, &ta_content);
-        num_ta = genalloc_len(sbearssl_ta, &ta_list);
-        btas = calloc(num_ta, sizeof *btas);
-        {
-            size_t i = num_ta;
-            while(i--) sbearssl_ta_to(genalloc_s(sbearssl_ta, &ta_list) + i, btas + i, ta_content.s);
-        }
 
+        num_ta = bearssl_read_certs(&btas);
+        if (num_ta == 0) {
+            fputs("couldn't open certs\n", stderr);
+            goto early_out;
+        }
         br_ssl_client_init_full(&sc, &xc, btas, num_ta);
         br_ssl_engine_set_buffer(&sc.eng, iobuf, sizeof iobuf, 1);
         br_ssl_client_reset(&sc, link, 0);

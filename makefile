@@ -4,7 +4,7 @@ INC = -Iextern
 OPT = -O2
 WARN = -Wall -Wextra -Werror=implicit
 CFLAGS = $(OPT) -g -pipe
-LDLIBS = -lbearssl -lsbearssl -lskarnet
+LDLIBS = -lbearssl
 LDFLAGS = -Wl,--as-needed
 
 BASEENCODE = extern/libbaseencode/baseencode.a
@@ -14,7 +14,7 @@ LIBSOBJS = $(BASEENCODEOBJS)
 
 FINAL = purr
 HEADERS = purr.h mmap_file.h
-OBJS = purr.o socket.o urls.o files.o comm.o formats.o encrypt.o mmap_file.o
+OBJS = purr.o socket.o urls.o files.o comm.o formats.o encrypt.o mmap_file.o read_certs.o
 
 TEST = tests
 TOBJS = tests.o formats.o urls.o mmap_file.o
