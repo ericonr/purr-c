@@ -1,3 +1,5 @@
+PREFIX = /usr/local
+
 INC = -Iextern
 OPT = -O2
 WARN = -Wall -Wextra -Werror=implicit
@@ -32,6 +34,11 @@ tests: $(TOBJS) $(LIBS)
 $(BASEENCODEOBJS): extern/libbaseencode/common.h extern/libbaseencode/baseencode.h
 $(BASEENCODE): $(BASEENCODEOBJS)
 	$(AR) r $@ $^
+
+install: $(FINAL)
+	install -Dm755 purr $(DESTDIR)$(PREFIX)/bin
+	ln -sf purr $(DESTDIR)$(PREFIX)/bin/meow
+	ln -sf purr $(DESTDIR)$(PREFIX)/bin/meowd
 
 clean:
 	rm -f $(FINAL) $(OBJS) $(TEST) $(TOBJS) $(LIBS) $(LIBSOBJS)

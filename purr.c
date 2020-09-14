@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <errno.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -14,17 +15,33 @@
 __attribute__ ((noreturn))
 static void usage(bool fail)
 {
-    puts("Usage: purrito [options] <action> [FILE]\n"
-         "    action: send | recv\n"
-         "Options:\n"
-         "    -a <algo>: choose algorithm, none available\n"
-         "    -u <url>: URL to use for send functionality\n"
-         "    -p <port>: port to use for send\n"
-         "    -o <output_file>: use file instead of stdout\n"
-         "    -n: don't strip HTTP header from response\n"
-         "    -e: encrypt content\n"
-         "    -d: debug"
-         "    -h: show this dialog"
+    char *proghelp;
+    if (strcmp(program_invocation_short_name, "meow") == 0) {
+        proghelp =
+            "Usage: meow [options] <file>\n"
+            "    send <file> in encrypted format\n";
+    } else if (strcmp(program_invocation_short_name, "meowd") == 0) {
+        proghelp =
+            "Usage meowd [options] <url>\n"
+            "    receive encrypted file from <url>\n";
+    } else {
+       proghelp =
+           "Usage: purr [options] <action> [<file>|<url>]\n"
+           "    action: send | recv\n";
+    }
+
+    printf(
+        "%s"
+        "Options:\n"
+        "    -a <algo>: choose algorithm, none available\n"
+        "    -u <url>: URL to use for send functionality\n"
+        "    -p <port>: port to use for send\n"
+        "    -o <output_file>: use file instead of stdout\n"
+        "    -n: don't strip HTTP header from response\n"
+        "    -e: encrypt content\n"
+        "    -d: debug"
+        "    -h: show this dialog",
+        proghelp
     );
 
     exit(fail? EXIT_FAILURE : EXIT_SUCCESS);
@@ -34,13 +51,24 @@ int main (int argc, char **argv)
 {
     int rv = EXIT_SUCCESS;
 
-    if (argc < 2) {
+    char *algo = NULL, *url_opt = NULL, *port_opt = NULL, *output_file = NULL;
+    bool no_strip = false, encrypt = false, debug = false;
+
+    bool send = false, recv = false;
+
+    if (strcmp(program_invocation_short_name, "meow") == 0) {
+        // encrypted send mode
+        send = true;
+        encrypt = true;
+    } else if (strcmp(program_invocation_short_name, "meowd") == 0) {
+        // encrypted recv mode
+        recv = true;
+        encrypt = true;
+    } else if (argc < 2) {
         usage(true);
     }
 
     int c;
-    char *algo = NULL, *url_opt = NULL, *port_opt = NULL, *output_file = NULL;
-    bool no_strip = false, encrypt = false, debug = false;
     while ((c = getopt(argc, argv, "a:u:p:o:nedh")) != -1) {
         switch (c) {
             case 'a':
@@ -76,17 +104,21 @@ int main (int argc, char **argv)
     argc -= optind;
     argv += optind;
 
-    if (argc < 1) {
-        usage(true);
-    }
-
-    bool send = false, recv = false;
-    if (strcmp(argv[0], "recv") == 0) {
-        recv = true;
-    } else if (strcmp(argv[0], "send") == 0) {
-        send = true;
+    if (recv || send) {
+        argc++;
+        argv--;
     } else {
-        usage(true);
+        if (argc < 1) {
+            usage(true);
+        }
+
+        if (strcmp(argv[0], "recv") == 0) {
+            recv = true;
+        } else if (strcmp(argv[0], "send") == 0) {
+            send = true;
+        } else {
+            usage(true);
+        }
     }
 
     struct mmap_file input;
@@ -123,7 +155,7 @@ int main (int argc, char **argv)
         } else if (argc > 2) {
             usage(true);
         } else {
-            fputs("stdin not supported for now!\n", stderr);
+            fputs("stdin not supported for ~now~ meow!\n", stderr);
             exit(EXIT_FAILURE);
         }
 

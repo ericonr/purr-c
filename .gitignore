@@ -2,3 +2,4 @@ purr
 tests
 *.o
 *.a
+.gdb_history
