@@ -272,6 +272,10 @@ int main (int argc, char **argv)
     }
 
     int socket = host_connect(link, port, debug);
+    if (socket < 0) {
+        fputs("couldn't open socket / find domain\n", stderr);
+        goto early_out;
+    }
     // avoid crashing on socket release
     signal(SIGPIPE, SIG_IGN);
 

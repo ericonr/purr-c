@@ -111,13 +111,13 @@ int get_encryption_params(char *path, uint8_t **keyp, uint8_t **ivp)
 int host_connect(const char *host, const char *port, bool debug)
 {
     struct addrinfo hints = { 0 }, *si = NULL;
-    int fd = 0, err = 0;
+    int fd = -1, err = 0;
 
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     err = getaddrinfo(host, port, &hints, &si);
     if (err) {
-        fprintf(stderr, "fail at getaddrinfo: %s\n", gai_strerror(err));
+        fprintf(stderr, "getaddrinfo(): %s\n", gai_strerror(err));
         return -1;
     }
 
@@ -143,12 +143,13 @@ int host_connect(const char *host, const char *port, bool debug)
         // try to establish connection
         fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
         if (fd < 0) {
-            perror("couldn't create socket");
+            perror("socket()");
             continue;
         }
         if (connect(fd, p->ai_addr, p->ai_addrlen) < 0) {
-            perror("couldn't connect to socket");
+            perror("connect()");
             close(fd);
+            fd = -1;
             continue;
         }
 
