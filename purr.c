@@ -297,7 +297,7 @@ int main (int argc, char **argv)
     } else if (recv && encrypt) {
         output = decrypt_mmap(output, key, iv);
         fwrite(output.data, 1, output.size, output_print);
-    } else if (fwrite(output.data, 1, output.offset, output_print) < output.offset) {
+    } else if ((off_t)fwrite(output.data, 1, output.offset, output_print) < output.offset) {
         fputs("might not have written all data\n", stderr);
     }
 

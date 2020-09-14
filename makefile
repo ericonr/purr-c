@@ -1,6 +1,6 @@
 INC = -Iextern
 OPT = -O2
-WARN = -Wall -Wextra
+WARN = -Wall -Wextra -Werror=implicit
 CFLAGS = $(OPT) -g -pipe
 LDLIBS = -lbearssl -lsbearssl -lskarnet
 LDFLAGS = -Wl,--as-needed

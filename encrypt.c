@@ -64,7 +64,7 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
     for (; i < (file_size - file.size); i++) {
         rv.data[file.size + i] = file.data[file.size + i];
     }
-    memset(rv.data, 0, (file_size - file.size - i));
+    // anonymous mapping -> subsequent padding bytes are already zero
 
     br_aes_big_cbcenc_keys br = { 0 };
     br_aes_big_cbcenc_init(&br, key, KEY_LEN);
@@ -73,7 +73,7 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
 
     #ifdef ENCODE_BASE_64
     baseencode_error_t berr;
-    const char *data = base64_encode(rv.data, rv.size, &berr);
+    char *data = base64_encode(rv.data, rv.size, &berr);
     if (data == NULL) {
         fprintf(stderr, "base64_encode(): error code %d\n", berr);
         // TODO: returns good rv
@@ -113,7 +113,7 @@ struct mmap_file decrypt_mmap(struct mmap_file file, const uint8_t *key, const u
     baseencode_error_t berr;
     size_t data_len;
     // TODO: find out why file.size is weird
-    uint8_t *data = base64_decode((char *)file.data, strlen(file.data), &berr, &data_len);
+    uint8_t *data = base64_decode((char *)file.data, strlen((char *)file.data), &berr, &data_len);
     if (data == NULL) {
         fprintf(stderr, "base64_decode(): error code %d\n", berr);
         return rv;
@@ -156,7 +156,7 @@ struct mmap_file decrypt_mmap(struct mmap_file file, const uint8_t *key, const u
 
     // kinda hacky, but not sure how to determine where padding starts otherwise
     // TODO: look only at last block, perhaps?
-    rv.size = strlen(rv.data);
+    rv.size = strlen((char *)rv.data);
 
     return rv;
 }
