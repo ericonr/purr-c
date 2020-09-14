@@ -26,7 +26,7 @@ static void usage(bool fail)
             "    receive encrypted file from <url>\n";
     } else {
        proghelp =
-           "Usage: purr [options] <action> [<file>|<url>]\n"
+           "Usage: purr [options] <action> <file>|<url>\n"
            "    action: send | recv\n";
     }
 
@@ -39,8 +39,10 @@ static void usage(bool fail)
         "    -o <output_file>: use file instead of stdout\n"
         "    -n: don't strip HTTP header from response\n"
         "    -e: encrypt content\n"
-        "    -d: debug"
-        "    -h: show this dialog",
+        "    -d: debug\n"
+        "    -h: show this dialog\n"
+        "Environment:\n"
+        "    CA_CERT_SSL_FILE: certificates file, default is /etc/ssl/certs.pem\n",
         proghelp
     );
 
