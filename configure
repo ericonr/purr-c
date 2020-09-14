@@ -1,0 +1,57 @@
+#!/bin/sh
+
+: "${CC:=cc}"
+ARGS="-x c -o /dev/null -"
+
+printf "" > config.mk
+
+$CC $ARGS <<EOF 2>/dev/null
+#include <sys/random.h>
+int main() {
+	ssize_t (*p)(void *, size_t, unsigned int) = getrandom;
+}
+EOF
+[ $? -eq 0 ] && HAVE_GETRANDOM=yes
+
+$CC $ARGS <<EOF 2>/dev/null
+#include <stdlib.h>
+int main() {
+	void (*p)(void *, size_t) = arc4random_buf;
+}
+EOF
+[ $? -eq 0 ] && HAVE_ARC4RANDOM=yes
+
+echo "HAVE_GETRANDOM:$HAVE_GETRANDOM"
+echo "HAVE_ARC4RANDOM:$HAVE_ARC4RANDOM"
+
+if [ "$HAVE_ARC4RANDOM" ]; then
+	echo "DEFS += -DHAVE_ARC4RANDOM" >> config.mk
+elif [ "$HAVE_GETRANDOM" ]; then
+	echo "DEFS += -DHAVE_GETRANDOM" >> config.mk
+fi
+
+$CC $ARGS <<EOF 2>/dev/null
+#define _GNU_SOURCE
+#include <errno.h>
+int main() {
+	const char *p = program_invocation_short_name;
+}
+EOF
+[ $? -eq 0 ] && HAVE_PROG_INVOCATION=yes
+
+$CC $ARGS <<EOF 2>/dev/null
+#include <stdlib.h>
+int main() {
+	const char (*p)(void) = getprogname;
+}
+EOF
+[ $? -eq 0 ] && HAVE_GETPROGNAME=yes
+
+echo "HAVE_PROG_INVOCATION:$HAVE_PROG_INVOCATION"
+echo "HAVE_GETPROGNAME:$HAVE_GETPROGNAME"
+
+if [ "$HAVE_GETPROGNAME" ]; then
+	echo "DEFS += -DHAVE_GETPROGNAME" >> config.mk
+elif [ "$HAVE_PROG_INVOCATION" ]; then
+	echo "DEFS += -DHAVE_PROG_INVOCATION" >> config.mk
+fi

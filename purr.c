@@ -1,5 +1,8 @@
+#ifdef HAVE_PROG_INVOCATION
 #define _GNU_SOURCE
 #include <errno.h>
+#endif
+
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -12,15 +15,17 @@
 #include "mmap_file.h"
 #include "read_certs.h"
 
+const char *progname;
+
 __attribute__ ((noreturn))
 static void usage(bool fail)
 {
     char *proghelp;
-    if (strcmp(program_invocation_short_name, "meow") == 0) {
+    if (strcmp(progname, "meow") == 0) {
         proghelp =
             "Usage: meow [options] <file>\n"
             "    send <file> in encrypted format\n";
-    } else if (strcmp(program_invocation_short_name, "meowd") == 0) {
+    } else if (strcmp(progname, "meowd") == 0) {
         proghelp =
             "Usage meowd [options] <url>\n"
             "    receive encrypted file from <url>\n";
@@ -58,11 +63,19 @@ int main (int argc, char **argv)
 
     bool send = false, recv = false;
 
-    if (strcmp(program_invocation_short_name, "meow") == 0) {
+    #ifdef HAVE_PROG_INVOCATION
+    progname = program_invocation_short_name;
+    #elif HAVE_GETPROGNAME
+    progname = getprogname();
+    #else
+    #error "no progname impl"
+    #endif /* PROG_INVOCATION & GETPROGNAME */
+
+    if (strcmp(progname, "meow") == 0) {
         // encrypted send mode
         send = true;
         encrypt = true;
-    } else if (strcmp(program_invocation_short_name, "meowd") == 0) {
+    } else if (strcmp(progname, "meowd") == 0) {
         // encrypted recv mode
         recv = true;
         encrypt = true;

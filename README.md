@@ -25,8 +25,16 @@ Usage information can be viewed with `purr -h`.
 ## Build dependencies
 
 The only external dependency is BearSSL, and GNU Make and a C compiler are
-required for building. This program currently depends on Linux's `getrandom(2)`
-function, but I plan on adding at least an `arc4random_buf(3)` implementation.
+required for building. This program can use either Linux's `getrandom(2)` system
+call or BSD's `arc4random_buf(3)` function.
+
+## Building
+
+``````
+$ ./configure # creates config.mk
+$ make
+$ make install PREFIX=$HOME/.local/bin
+``````
 
 ## Acknowledgements
 

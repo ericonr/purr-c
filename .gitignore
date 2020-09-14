@@ -3,3 +3,4 @@ tests
 *.o
 *.a
 .gdb_history
+config.mk

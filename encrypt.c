@@ -45,12 +45,18 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
         return rv;
     }
     #ifdef RANDOMIZE_IV
+    #ifdef HAVE_GETRANDOM
     err = getrandom(iv, IV_LEN, 0);
-    memcpy(iv_throwaway, iv, IV_LEN);
     if (err != IV_LEN) {
         fputs("getrandom() error!\n", stderr);
         return rv;
     }
+    #elif HAVE_ARC4RANDOM
+    arc4random_buf(iv, IV_LEN);
+    #else
+    #error "no random buf impl"
+    #endif /* GETRANDOM & ARC4RANDOM */
+    memcpy(iv_throwaway, iv, IV_LEN);
     #endif /* RANDOMIZE_IV */
 
     rv.data = mmap(NULL, rv.size, rv.prot, rv.flags, -1, 0);

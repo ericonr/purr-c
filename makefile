@@ -1,11 +1,13 @@
 PREFIX = /usr/local
 
-INC = -Iextern
+include config.mk
+
 OPT = -O2
 WARN = -Wall -Wextra -Werror=implicit
-CFLAGS = $(OPT) -g -pipe
-LDLIBS = -lbearssl
-LDFLAGS = -Wl,--as-needed
+CFLAGS += $(OPT) -g -pipe $(DEFS)
+LDLIBS += -lbearssl
+LDFLAGS += -Wl,--as-needed
+INC += -Iextern
 
 BASEENCODE = extern/libbaseencode/baseencode.a
 BASEENCODEOBJS = extern/libbaseencode/base64.o extern/libbaseencode/base32.o
@@ -24,7 +26,7 @@ all: $(FINAL)
 check: $(TEST)
 	./tests
 
-$(OBJS) $(TOBJS): $(HEADERS)
+$(OBJS) $(TOBJS): $(HEADERS) config.mk
 $(OBJS) $(TOBJS): CFLAGS += $(WARN)
 encrypt.o: CFLAGS += $(INC)
 
