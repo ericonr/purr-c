@@ -55,7 +55,7 @@ struct mmap_file create_mmap_from_file(const char *name, int prot)
     }
 
     rv.data = mmap(NULL, rv.size, rv.prot, rv.flags, fd, 0);
-    close(fd);
+    if (fd > 0) close(fd);
 
     return rv;
 }
