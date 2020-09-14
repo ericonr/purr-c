@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <sys/mman.h>
 
 #include <bearssl.h>
 
@@ -21,10 +20,6 @@
 #define RANDOMIZE_IV
 #define ENCODE_BASE_64
 #define DECODE_BASE_64
-
-#define RESET_MMAP(file) do{(file).offset = 0; (file).cursor = 0}while(0);
-#define ERROR_MMAP(file) ((file).data == MAP_FAILED || (file).data == NULL)
-#define CLOSE_MMAP(file) do{if((file).data != MAP_FAILED && (file).data != NULL) munmap((file).data, (file).size);}while(0);
 
 struct connection_information {
     br_sslio_context *ioc;
@@ -44,12 +39,6 @@ struct transmission_information {
     bool no_strip, debug, ssl;
 };
 
-struct mmap_file {
-    uint8_t *data, *cursor;
-    off_t size, offset;
-    int prot, flags;
-};
-
 /* sockets.c */
 int socket_read(void *, uint8_t *, size_t);
 int socket_write(void *, const uint8_t *, size_t);
@@ -60,9 +49,6 @@ int get_encryption_params(char *, uint8_t **, uint8_t **);
 int host_connect(const char *, const char *, bool);
 
 /* files.c */
-struct mmap_file create_mmap_from_file(const char *, int);
-int read_from_mmap(struct mmap_file *, int);
-int write_into_mmap(struct mmap_file *, const uint8_t *, int);
 size_t ssl_to_mmap(struct transmission_information);
 size_t mmap_to_ssl(struct transmission_information);
 
@@ -72,9 +58,5 @@ int send_and_receive(struct connection_information *);
 /* formats.c */
 char *print_hex(const uint8_t *, int, bool);
 int decode_hex(const char *, uint8_t *, int);
-
-/* encrypt.c */
-struct mmap_file encrypt_mmap(struct mmap_file, uint8_t **, uint8_t **);
-struct mmap_file decrypt_mmap(struct mmap_file, const uint8_t *, const uint8_t *);
 
 #endif // __PURR_H_

@@ -11,7 +11,8 @@ LIBS = $(BASEENCODE)
 LIBSOBJS = $(BASEENCODEOBJS)
 
 FINAL = purr
-OBJS = purr.o socket.o urls.o files.o comm.o formats.o encrypt.o
+HEADERS = purr.h mmap_file.h
+OBJS = purr.o socket.o urls.o files.o comm.o formats.o encrypt.o mmap_file.o
 
 TEST = tests
 TOBJS = tests.o formats.o urls.o
@@ -21,7 +22,7 @@ all: $(FINAL)
 check: $(TEST)
 	./tests
 
-$(OBJS): purr.h
+$(OBJS): $(HEADERS)
 $(OBJS): CFLAGS += $(WARN) $(INC)
 purr: $(OBJS) $(LIBS)
 tests: $(TOBJS) $(LIBS)

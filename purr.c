@@ -9,6 +9,7 @@
 #include <s6-networking/sbearssl.h>
 
 #include "purr.h"
+#include "mmap_file.h"
 
 __attribute__ ((noreturn))
 static void usage(bool fail)
@@ -89,7 +90,7 @@ int main (int argc, char **argv)
     }
 
     struct mmap_file input;
-    struct mmap_file output = create_mmap_from_file(NULL, PROT_WRITE | PROT_READ);
+    struct mmap_file output = create_mmap_from_file(NULL, PROT_MEM);
     if (ERROR_MMAP(output)) {
         perror("couldn't open output file");
         exit(EXIT_FAILURE);

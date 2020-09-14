@@ -11,6 +11,7 @@
 #include "libbaseencode/baseencode.h"
 
 #include "purr.h"
+#include "mmap_file.h"
 
 /*
  * This function takes an mmap_file struct, and creates an encrypted buffer from it.
@@ -27,8 +28,7 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
     if (blocks * br_aes_big_BLOCK_SIZE < file_size) blocks++;
     file_size = blocks * br_aes_big_BLOCK_SIZE;
 
-    struct mmap_file rv =
-        {.size = file_size, .prot = PROT_WRITE | PROT_READ, .flags = MAP_ANONYMOUS | MAP_PRIVATE};
+    struct mmap_file rv = {.size = file_size, .prot = PROT_MEM, .flags = MAP_MEM};
 
     uint8_t *key = calloc(KEY_LEN, 1);
     uint8_t *iv = calloc(IV_LEN, 1);
@@ -80,8 +80,7 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
         return rv;
     }
     size_t len = strlen(data);
-    struct mmap_file rv_64 =
-        {.size = len, .prot = PROT_WRITE | PROT_READ, .flags = MAP_ANONYMOUS | MAP_PRIVATE};
+    struct mmap_file rv_64 = {.size = len, .prot = PROT_MEM, .flags = MAP_MEM};
     rv_64.data = mmap(NULL, rv_64.size, rv_64.prot, rv_64.flags, -1, 0);
     if (ERROR_MMAP(rv_64)) {
         perror("mmap()");
@@ -106,8 +105,7 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
 
 struct mmap_file decrypt_mmap(struct mmap_file file, const uint8_t *key, const uint8_t *iv)
 {
-    struct mmap_file rv =
-        {.size = file.size, .prot = PROT_WRITE | PROT_READ, .flags = MAP_ANONYMOUS | MAP_PRIVATE};
+    struct mmap_file rv = {.size = file.size, .prot = PROT_MEM, .flags = MAP_MEM};
 
     #ifdef DECODE_BASE_64
     baseencode_error_t berr;
