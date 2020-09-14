@@ -1,8 +1,11 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <sys/random.h>
 
 #include "purr.h"
+#include "mmap_file.h"
 
 static int compare_strings(const char *expected, const char *result, const char *function)
 {
@@ -79,6 +82,22 @@ int main()
         rv = compare_arrays(key_exc, key, KEY_LEN, "get_encryption_params") ? 1 : rv;
         rv = compare_arrays(iv_exc, iv, IV_LEN, "get_encryption_params") ? 1 : rv;
         assert(err == 0);
+    }
+
+    {
+        /* mmap_file.c */
+        int write_size = 1024 * 1024;
+        struct mmap_file f = {.size = 2 * write_size, .prot = PROT_MEM, .flags = MAP_MEM};
+        f.data = mmap(NULL, f.size, f.prot, f.flags, -1, 0);
+        assert(!ERROR_MMAP(f));
+        uint8_t *data = malloc(write_size);
+        getrandom(data, write_size, 0);
+        assert(data);
+        int written = write_into_mmap(&f, data, write_size);
+        assert(f.offset == written);
+        RESET_MMAP(f);
+        read_from_mmap(&f, write_size);
+        rv = compare_arrays(data, f.data, write_size, "{write_into,read_from}_mmap") ? 1 : rv;
     }
 
     return rv;

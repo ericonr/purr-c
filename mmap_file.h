@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <sys/mman.h>
 
-#define RESET_MMAP(file) do{(file).offset = 0; (file).cursor = 0}while(0);
+#define RESET_MMAP(file) do{(file).offset = 0; (file).cursor = 0;}while(0);
 #define ERROR_MMAP(file) ((file).data == MAP_FAILED || (file).data == NULL)
 #define CLOSE_MMAP(file) do{if((file).data != MAP_FAILED && (file).data != NULL) munmap((file).data, (file).size);}while(0);
 

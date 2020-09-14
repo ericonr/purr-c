@@ -15,15 +15,17 @@ HEADERS = purr.h mmap_file.h
 OBJS = purr.o socket.o urls.o files.o comm.o formats.o encrypt.o mmap_file.o
 
 TEST = tests
-TOBJS = tests.o formats.o urls.o
+TOBJS = tests.o formats.o urls.o mmap_file.o
 
 all: $(FINAL)
 
 check: $(TEST)
 	./tests
 
-$(OBJS): $(HEADERS)
-$(OBJS): CFLAGS += $(WARN) $(INC)
+$(OBJS) $(TOBJS): $(HEADERS)
+$(OBJS) $(TOBJS): CFLAGS += $(WARN)
+encrypt.o: CFLAGS += $(INC)
+
 purr: $(OBJS) $(LIBS)
 tests: $(TOBJS) $(LIBS)
 
