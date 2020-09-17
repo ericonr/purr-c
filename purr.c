@@ -271,6 +271,7 @@ int main (int argc, char **argv)
     uint8_t iobuf[BR_SSL_BUFSIZE_BIDI];
     br_sslio_context ioc;
 
+    int socket;
     if (portn == HTTPS_PORT) {
         if (debug) {
             fputs("reading certs...\n", stderr);
@@ -284,19 +285,19 @@ int main (int argc, char **argv)
         br_ssl_client_init_full(&sc, &xc, btas, num_ta);
         br_ssl_engine_set_buffer(&sc.eng, iobuf, sizeof iobuf, 1);
         br_ssl_client_reset(&sc, link, 0);
+
+        // this function only takes the pointer to socket, so it's safe
+        // to use unitialized socket
+        br_sslio_init(&ioc, &sc.eng, socket_read, &socket, socket_write, &socket);
     }
 
-    int socket = host_connect(link, port, debug);
+    socket = host_connect(link, port, debug);
     if (socket < 0) {
         fputs("couldn't open socket / find domain\n", stderr);
         goto early_out;
     }
     // avoid crashing on socket release
     signal(SIGPIPE, SIG_IGN);
-
-    if (portn == HTTPS_PORT) {
-        br_sslio_init(&ioc, &sc.eng, socket_read, &socket, socket_write, &socket);
-    }
 
     struct connection_information ci =
         {.ioc = &ioc, .sc = &sc,
@@ -307,6 +308,7 @@ int main (int argc, char **argv)
          .no_strip = no_strip, .debug = debug};
 
     rv = send_and_receive(&ci);
+    close(socket);
 
     if (send && encrypt) {
         // backend can't distinguish between a normal and an encrypted paste,
