@@ -21,6 +21,7 @@ static size_t fwrite_strip(const uint8_t *buf, int rlen, struct strip_header_inf
     int i = 0;
     if (st->counter != len) {
         for (; i < rlen; i++) {
+            // state machine to detect the HTTP header separator
             if (buf[i] == separator[st->counter]) {
                 st->counter++;
             } else {
@@ -28,10 +29,6 @@ static size_t fwrite_strip(const uint8_t *buf, int rlen, struct strip_header_inf
                 if (buf[i] == separator[st->counter]) {
                     st->counter++;
                 }
-            }
-
-            if (st->debug) {
-                fputc(buf[i], stderr);
             }
 
             if (st->header_counter < HEADER_MAX_LEN - 1) {
@@ -48,7 +45,15 @@ static size_t fwrite_strip(const uint8_t *buf, int rlen, struct strip_header_inf
         }
     }
 
-    //return fwrite(buf + i, 1, rlen - i, stdout);
+    // no_strip mode -> show header in stdout
+    // debug mode -> show header in stderr
+    // otherwise -> hide header
+    if (st->no_strip) {
+        fwrite(buf, 1, i, stdout);
+    } else if (st->debug) {
+        fwrite(buf, 1, i, stderr);
+    }
+
     return write_into_mmap(st->output, buf + i, rlen - i);
 }
 
@@ -59,10 +64,9 @@ size_t ssl_to_mmap(struct transmission_information ti)
         {.output = ti.file, .header = calloc(HEADER_MAX_LEN, 1), .debug = ti.debug, .no_strip = ti.no_strip};
     if (st.header == NULL) {
         perror("allocation failure");
-        return -1;
+        goto early_out;
     }
 
-    char *length = NULL;
     size_t transmission_size = 0;
     bool tried_content_length = false;
     while (1) {
@@ -81,22 +85,35 @@ size_t ssl_to_mmap(struct transmission_information ti)
         rv += fwrite_strip(tmp, rlen, &st);
 
         // check if header is done
-        // TODO: currently works only in strip mode
-        if (st.counter == 4) {
-            if (length == NULL && !tried_content_length) {
-                tried_content_length = true;
-                const char *needle = "Content-Length: ";
-                length = strstr(st.header, needle);
-                if (length) {
-                    transmission_size = atoll(length + strlen(needle));
-                }
+        if (st.counter == 4 && !tried_content_length) {
+            const char *needle = "Content-Length: ";
+            char *length = strstr(st.header, needle);
+            if (length == NULL) {
+                fputs("header didn't contain content-length field\n", stderr);
+                rv = 0;
+                goto early_out;
             }
-            if (transmission_size) {
-                if (transmission_size == rv) break;
+
+            transmission_size = atoll(length + strlen(needle));
+            if (transmission_size == 0) {
+                fputs("couldn't parse content-length\n", stderr);
+                rv = 0;
+                goto early_out;
+            }
+
+            tried_content_length = true;
+        }
+
+        if (transmission_size) {
+            // limit transmission size
+            if (rv >= transmission_size) {
+                rv = transmission_size;
+                break;
             }
         }
     }
 
+  early_out:
     free(st.header);
     return rv;
 }

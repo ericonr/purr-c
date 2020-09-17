@@ -42,23 +42,39 @@ int send_and_receive(struct connection_information *ci)
 
     int rv = 0;
     if (ti.ssl) {
+        // situation around close_notify is fuzzy:
+        // relevant RFCs say it is required, but lots of server impls
+        // don't respond to it, due to HTTP/1.0 onward requiring self-termination
+        // (in the form of Content-Length, for our case).
+        // therefore, only complain about it in debug mode.
+        // source: https://security.stackexchange.com/questions/82028/ssl-tls-is-a-server-always-required-to-respond-to-a-close-notify
         if (br_sslio_close(ci->ioc) != 0) {
-            fputs("couldn't close SSL connection!\n", stderr);
+            if (ci->debug) {
+                fputs("couldn't close SSL connection!\n", stderr);
+            }
         }
 
-        // check whether everything was closed properly
+        // check whether everything was closed properly:
+        // leaving the connection hanging is ok, per the above comment.
+        // errors checked relate to certificate errors and the kind.
+        // the caller shouldn't use the buffers passed to this function if it
+        // returns an error.
         if (br_ssl_engine_current_state(&ci->sc->eng) == BR_SSL_CLOSED) {
-            int err = br_ssl_engine_last_error(&ci->sc->eng);
-            if (err == 0) {
+            const int err = br_ssl_engine_last_error(&ci->sc->eng);
+            if (err == BR_ERR_OK) {
                 if (ci->debug) fputs("all good!\n", stderr);
+                rv = EXIT_SUCCESS;
+            } else if (err == BR_ERR_IO) {
+                if (ci->debug) fputs("I/O error, not critical\n", stderr);
                 rv = EXIT_SUCCESS;
             } else {
                 fprintf(stderr, "SSL error: %d\n", err);
                 rv = EXIT_FAILURE;
             }
         } else {
-            fputs("socket closed without terminating ssl!\n", stderr);
-            rv = EXIT_FAILURE;
+            // this case shouldn't happen, since br_sslio_close is called above.
+            if (ci->debug) fputs("socket closed without terminating ssl!\n", stderr);
+            rv = EXIT_SUCCESS;
         }
     }
 
