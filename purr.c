@@ -263,8 +263,8 @@ int main (int argc, char **argv)
         fputs("-----------------------------\n", stderr);
     }
 
-    size_t num_ta;
-    br_x509_trust_anchor *btas;
+    size_t num_ta = 0;
+    br_x509_trust_anchor *btas = NULL;
 
     br_ssl_client_context sc;
     br_x509_minimal_context xc;
@@ -308,7 +308,9 @@ int main (int argc, char **argv)
          .no_strip = no_strip, .debug = debug};
 
     rv = send_and_receive(&ci);
+    // clean-up
     close(socket);
+    bearssl_free_certs(&btas, num_ta);
 
     if (send && encrypt) {
         // backend can't distinguish between a normal and an encrypted paste,

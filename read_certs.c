@@ -16,6 +16,24 @@ struct create_tas {
     size_t n, size;
 };
 
+void bearssl_free_certs(br_x509_trust_anchor **tasp, size_t n)
+{
+    br_x509_trust_anchor *tas = *tasp;
+    for (size_t i = 0; i < n; i++) {
+        br_x509_trust_anchor ta = tas[i];
+        free(ta.dn.data);
+        if (ta.pkey.key_type == BR_KEYTYPE_RSA) {
+            free(ta.pkey.key.rsa.n);
+            free(ta.pkey.key.rsa.e);
+        } else if (ta.pkey.key_type == BR_KEYTYPE_EC) {
+            free(ta.pkey.key.ec.q);
+        }
+    }
+
+    free(tas);
+    *tasp = NULL;
+}
+
 static int append_ta(struct create_tas *ct, br_x509_trust_anchor ta)
 {
     if (ct->n + 1 > ct->size) {
