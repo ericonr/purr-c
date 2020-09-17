@@ -359,8 +359,8 @@ int main (int argc, char **argv)
     free(iv);
   early_out:
     if (output_print != stdout) fclose(output_print);
-    CLOSE_MMAP(input);
-    CLOSE_MMAP(output);
+    free_mmap(&input);
+    free_mmap(&output);
 
     return rv;
 }

@@ -59,9 +59,7 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
     memcpy(iv_throwaway, iv, IV_LEN);
     #endif /* RANDOMIZE_IV */
 
-    rv.data = mmap(NULL, rv.size, rv.prot, rv.flags, -1, 0);
-    if (ERROR_MMAP(rv)) {
-        perror("mmap()");
+    if (!allocate_mmap(&rv)) {
         return rv;
     }
 
@@ -77,27 +75,24 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
     #ifdef ENCODE_BASE_64
     baseencode_error_t berr;
     char *data = base64_encode(rv.data, rv.size, &berr);
+    struct mmap_file rv_64 = {.prot = PROT_MEM, .flags = MAP_MEM};
     if (data == NULL) {
         fprintf(stderr, "base64_encode(): error code %d\n", berr);
-        // TODO: returns good rv
-        return rv;
+        return rv_64;
     }
-    size_t len = strlen(data);
-    struct mmap_file rv_64 = {.size = len, .prot = PROT_MEM, .flags = MAP_MEM};
-    rv_64.data = mmap(NULL, rv_64.size, rv_64.prot, rv_64.flags, -1, 0);
-    if (ERROR_MMAP(rv_64)) {
-        perror("mmap()");
-        // TODO: returns good rv
-        return rv;
+
+    rv_64.size = strlen(data);
+    if (!allocate_mmap(&rv_64)) {
+        return rv_64;
     }
-    memcpy(rv_64.data, data, len);
+    memcpy(rv_64.data, data, rv_64.size);
 
     free(data);
-    munmap(rv.data, rv.size);
+    free_mmap(&rv);
     rv = rv_64;
     #endif /* ENCODE_BASE_64 */
 
-    munmap(file.data, file.size);
+    free_mmap(&file);
 
     // pass pointers to caller
     *keyp  = key;
@@ -126,10 +121,7 @@ struct mmap_file decrypt_mmap(struct mmap_file file, const uint8_t *key, const u
     rv.size = data_len;
     #endif /* DECODE_BASE_64 */
 
-
-    rv.data = mmap(NULL, rv.size, rv.prot, rv.flags, -1, 0);
-    if (ERROR_MMAP(rv)) {
-        perror("mmap()");
+    if (allocate_mmap(&rv)) {
         return rv;
     }
 
@@ -140,12 +132,13 @@ struct mmap_file decrypt_mmap(struct mmap_file file, const uint8_t *key, const u
     memcpy(rv.data, file.data, file.size);
     #endif /* DECODE_BASE_64 */
 
-    munmap(file.data, file.size);
+    free_mmap(&file);
 
     uint8_t *iv_throwaway = calloc(IV_LEN, 1);
     if (iv_throwaway == NULL) {
-        perror("malloc()");
-        // TODO: returns good rv
+        perror("calloc()");
+        // return bad rv so caller knows there was a failure
+        free_mmap(&rv);
         return rv;
     }
     memcpy(iv_throwaway, iv, IV_LEN);

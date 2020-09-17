@@ -2,11 +2,11 @@
 #define __MMAP_FILE_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <sys/mman.h>
 
 #define RESET_MMAP(file) do{(file).offset = 0; (file).cursor = 0;}while(0);
 #define ERROR_MMAP(file) ((file).data == MAP_FAILED || (file).data == NULL)
-#define CLOSE_MMAP(file) do{if((file).data != MAP_FAILED && (file).data != NULL) munmap((file).data, (file).size);}while(0);
 
 // definitions for memory backed mappings
 #define PROT_MEM (PROT_WRITE | PROT_READ)
@@ -22,6 +22,8 @@ struct mmap_file {
 };
 
 /* mmap_file.c */
+bool allocate_mmap(struct mmap_file *);
+void free_mmap(struct mmap_file *);
 struct mmap_file create_mmap_from_file(const char *, int);
 int read_from_mmap(struct mmap_file *, int);
 int write_into_mmap(struct mmap_file *, const uint8_t *, int);

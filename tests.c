@@ -102,8 +102,7 @@ int main()
         /* mmap_file.c */
         int write_size = 1024 * 1024;
         struct mmap_file f = {.size = 2 * write_size, .prot = PROT_MEM, .flags = MAP_MEM};
-        f.data = mmap(NULL, f.size, f.prot, f.flags, -1, 0);
-        assert(!ERROR_MMAP(f));
+        assert(allocate_mmap(&f));
         uint8_t *data = malloc(write_size);
         getrandom(data, write_size, 0);
         assert(data);

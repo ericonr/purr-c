@@ -11,6 +11,26 @@
 
 #include "mmap_file.h"
 
+bool allocate_mmap(struct mmap_file *f)
+{
+    f->data = mmap(NULL, f->size, f->prot, f->flags, -1, 0);
+    if (ERROR_MMAP(*f)) {
+        perror("mmap()");
+        return false;
+    }
+    return true;
+}
+
+void free_mmap(struct mmap_file *f)
+{
+    if (f->data == MAP_FAILED || f->data == NULL) {
+        return;
+    }
+    munmap(f->data, f->size);
+    f->data = NULL;
+    f->size = 0;
+}
+
 struct mmap_file create_mmap_from_file(const char *name, int prot)
 {
     struct mmap_file rv = {.prot = prot};
