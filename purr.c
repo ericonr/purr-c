@@ -149,7 +149,7 @@ int main (int argc, char **argv)
             usage(true);
         }
         if (output_file && strcmp(output_file, "-")) {
-            output_print = fopen(output_file, "w");
+            output_print = fopen(output_file, "we");
             if (output_print == NULL) {
                 perror("couldn't open output file");
                 exit(EXIT_FAILURE);

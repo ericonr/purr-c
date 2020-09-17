@@ -36,7 +36,7 @@ struct mmap_file create_mmap_from_file(const char *name, int prot)
     struct mmap_file rv = {.prot = prot};
     int fd;
     if (prot == PROT_READ) {
-        fd = open(name, O_RDONLY);
+        fd = open(name, O_RDONLY | O_CLOEXEC);
         rv.flags = MAP_PRIVATE;
 
         if (fd == -1) {
@@ -50,7 +50,7 @@ struct mmap_file create_mmap_from_file(const char *name, int prot)
         }
         rv.size = st.st_size;
     } else if (prot == PROT_WRITE) {
-        fd = open(name, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
+        fd = open(name, O_WRONLY | O_CREAT | O_CLOEXEC, S_IRUSR | S_IWUSR);
         rv.flags = MAP_PRIVATE;
 
         if (fd == -1) {
