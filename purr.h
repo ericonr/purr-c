@@ -44,7 +44,7 @@ int socket_read(void *, uint8_t *, size_t);
 int socket_write(void *, const uint8_t *, size_t);
 
 /* urls.c */
-int clean_up_link(const char *, char *, char *, char *);
+int clean_up_link(const char *, char **, char **, char **, char **);
 int get_encryption_params(char *, uint8_t **, uint8_t **);
 int host_connect(const char *, const char *, bool);
 

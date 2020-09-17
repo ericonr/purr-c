@@ -182,15 +182,8 @@ int main (int argc, char **argv)
         }
     }
 
-    size_t allocate = strlen(url) + 1;
-    char *link = calloc(allocate, 1);
-    char *path = calloc(allocate, 1);
-    char *port = calloc(16, 1);
-    if (link == NULL || path == NULL || port == NULL) {
-        perror("allocation failure");
-        exit(EXIT_FAILURE);
-    }
-    int portn = clean_up_link(url, link, path, port);
+    char *scheme = NULL, *link = NULL, *path = NULL, *port = NULL;
+    int portn = clean_up_link(url, &scheme, &link, &path, &port);
     if (portn == -1) {
         fputs("couldn't parse URL!\n", stderr);
         rv = EXIT_FAILURE;
@@ -199,6 +192,12 @@ int main (int argc, char **argv)
         fputs("only supports HTTP and HTTPS for now!\n", stderr);
         rv = EXIT_FAILURE;
         goto early_out;
+    }
+
+    // clean up hash property, if present
+    char *hash_prop;
+    if (!encrypt && (hash_prop = strchr(path, '#'))) {
+        *hash_prop = 0;
     }
 
     uint8_t *key = NULL;
@@ -214,6 +213,7 @@ int main (int argc, char **argv)
         int err = get_encryption_params(path, &key, &iv);
         if (err) {
             fputs("get_encription_params(): error decoding url\n", stderr);
+            rv = EXIT_FAILURE;
             goto early_out;
         }
     }
@@ -309,15 +309,16 @@ int main (int argc, char **argv)
     rv = send_and_receive(&ci);
 
     if (send && encrypt) {
-        size_t allocate_res = strlen((char *)output.data) + 1;
-        char *link_res = calloc(allocate_res, 1);
-        char *path_res = calloc(allocate_res, 1);
-        char *port_res = calloc(16, 1);
-        if (link_res == NULL || path_res == NULL || port_res == NULL) {
-            perror("allocation failure");
-            exit(EXIT_FAILURE);
+        // backend can't distinguish between a normal and an encrypted paste,
+        // but the links for accessing each are different,
+        // so we need to fix it locally
+        char *scheme_res = NULL, *link_res = NULL, *path_res = NULL, *port_res = NULL;
+        int portn_res =
+            clean_up_link((char *)output.data, &scheme_res, &link_res, &path_res, &port_res);
+        if (portn_res == -1) {
+            fprintf(stderr, "couldn't clean up received link: %s\n", (char *)output.data);
+            goto out;
         }
-        clean_up_link((char *)output.data, link_res, path_res, port_res);
 
         // clean up linebreak
         char *linebreak = strchr(path_res, '\n');
@@ -329,13 +330,13 @@ int main (int argc, char **argv)
         char *iv_s = print_hex(iv, IV_LEN, false);
         if (key_s == NULL || iv_s == NULL) {
             perror("malloc()");
-            goto early_out;
+            goto out;
         }
 
-        // TODO: fix hack for https link
-        fprintf(output_print, "https://%s/paste.html#%s_%s_%s",
-                link_res, path_res + 1, key_s, iv_s);
+        fprintf(output_print, "%s%s/paste.html#%s_%s_%s",
+                scheme_res, link_res, path_res + 1, key_s, iv_s);
 
+        free(scheme_res);
         free(link_res);
         free(path_res);
         free(port_res);
@@ -348,15 +349,15 @@ int main (int argc, char **argv)
         fputs("might not have written all data\n", stderr);
     }
 
-  //out:
-    close(socket);
+  out:
+    free(scheme);
     free(link);
     free(path);
     free(port);
     free(request);
     free(key);
     free(iv);
-early_out:
+  early_out:
     if (output_print != stdout) fclose(output_print);
     CLOSE_MMAP(input);
     CLOSE_MMAP(output);

@@ -54,22 +54,36 @@ int main()
     {
         /* urls.c */
         const char *dirty = "https://hello.com/ash";
-        char clean[4096], path[4096], port[16];
-        int portn = clean_up_link(dirty, clean, path, port);
+        //char scheme[4096], clean[4096], path[4096], port[16];
+        char *scheme = NULL, *clean = NULL, *path = NULL, *port = NULL;
+        int portn = clean_up_link(dirty, &scheme, &clean, &path, &port);
+        rv = compare_strings("https://", scheme, "clean_up_link") ? 1 : rv;
         rv = compare_strings("hello.com", clean, "clean_up_link") ? 1 : rv;
         rv = compare_strings("/ash", path, "clean_up_link") ? 1 : rv;
         rv = compare_strings("443", port, "clean_up_link") ? 1 : rv;
         assert(portn == HTTPS_PORT);
 
+        free(scheme); scheme = NULL;
+        free(clean); clean = NULL;
+        free(path); path = NULL;
+        free(port); port = NULL;
+
         dirty = "http://hello.com";
-        portn = clean_up_link(dirty, clean, path, port);
+        portn = clean_up_link(dirty, &scheme, &clean, &path, &port);
+        rv = compare_strings("http://", scheme, "clean_up_link") ? 1 : rv;
         rv = compare_strings("hello.com", clean, "clean_up_link") ? 1 : rv;
         rv = compare_strings("/", path, "clean_up_link") ? 1 : rv;
         rv = compare_strings("80", port, "clean_up_link") ? 1 : rv;
         assert(portn == HTTP_PORT);
 
+        free(scheme); scheme = NULL;
+        free(clean); clean = NULL;
+        free(path); path = NULL;
+        free(port); port = NULL;
+
         dirty = "https://bsd.ac/paste.html#sieqaqk_73fe_df51";
-        portn = clean_up_link(dirty, clean, path, port);
+        portn = clean_up_link(dirty, &scheme, &clean, &path, &port);
+        rv = compare_strings("https://", scheme, "clean_up_link") ? 1 : rv;
         rv = compare_strings("bsd.ac", clean, "clean_up_link") ? 1 : rv;
         rv = compare_strings("/paste.html#sieqaqk_73fe_df51", path, "clean_up_link") ? 1 : rv;
         rv = compare_strings("443", port, "clean_up_link") ? 1 : rv;

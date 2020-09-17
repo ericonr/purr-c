@@ -9,37 +9,65 @@
 
 #include "purr.h"
 
-int clean_up_link(const char *dirty, char *clean, char *path, char *port)
+#define MAX_DOMAIN_LEN 254
+#define MAX_SHORTY_LEN 16
+
+static const char *http_sch = "http://";
+static const char *https_sch = "https://";
+
+/*
+ * This function cleans up the link in dirty, providing each of its parts in the
+ * buffers pointed to by schemep, cleanp, pathp and portp.
+ * The path will include the hash property of the link.
+ *
+ * The buffers are expected to be zeroed out, so passing NULL pointers is recommended,
+ * as the function can calloc them itself.
+ */
+int clean_up_link(const char *dirty, char **schemep, char **cleanp, char **pathp, char **portp)
 {
+    int portn = -1;
+
+    // allocate strings, if they don't already exist
+    size_t allocate = strlen(dirty);
+    char *scheme = *schemep ? *schemep : calloc(MAX_SHORTY_LEN, 1);
+    char *clean = *cleanp ? *cleanp : calloc(MAX_DOMAIN_LEN, 1);
+    char *path = *pathp ? *pathp : calloc(allocate, 1);
+    char *port = *portp ? *portp : calloc(MAX_SHORTY_LEN, 1);
+
+    if (scheme == NULL || clean == NULL || path == NULL || port == NULL) {
+        perror("allocation failure");
+        return portn;
+    }
+
+    *schemep = scheme;
+    *cleanp = clean;
+    *pathp = path;
+    *portp = port;
+
     // detect protocol, remove protocol prefix
-    int portn = 0;
-    const char *first_colon = strchr(dirty, ':');
+    const char *scheme_separator = strstr(dirty, "://");
     const char *start_link = NULL;
-    if (first_colon == NULL) {
+    if (scheme_separator == NULL) {
         // no protocol specified, default to HTTP
         portn = HTTP_PORT;
+        strcpy(scheme, http_sch);
         start_link = dirty;
     } else {
-        if (strstr(dirty, "https://") != NULL) {
+        memcpy(scheme, dirty, scheme_separator - dirty + 3);
+        if (strcmp(scheme, https_sch) == 0) {
             portn = HTTPS_PORT;
-        } else if (strstr(dirty, "http://") != NULL) {
+        } else if (strcmp(scheme, http_sch) == 0) {
             portn = HTTP_PORT;
         } else {
             fputs("clean_up_link(): unknown protocol!\n", stderr);
             return -1;
         }
 
-        if (first_colon[1] == '/' && first_colon[2] == '/') {
-            // correct format
-            start_link = first_colon + 3;
-        } else {
-            fputs("clean_up_link(): bad header!\n", stderr);
-            return -1;
-        }
+        start_link = dirty + strlen(scheme);
     }
 
     // maximum size necessary
-    strlcpy(clean, start_link, 254);
+    strlcpy(clean, start_link, MAX_DOMAIN_LEN);
     char *slash = strchr(clean, '/');
     if (slash != NULL) {
         // copy to path
@@ -58,6 +86,11 @@ int clean_up_link(const char *dirty, char *clean, char *path, char *port)
 
 #define MALFORM_ERROR(p) do{if((p) == NULL || (p)[1] == 0) {fputs("get_encryption_params(): malformed URL\n", stderr); return rv;}}while(0);
 
+/*
+ * This function extracts encryption parameters from a path.
+ * It expects paths in the format "/paste.html#<actual_path>_<key>[_<iv>]",
+ * and will update the path arg to an appropriate value.
+ */
 int get_encryption_params(char *path, uint8_t **keyp, uint8_t **ivp)
 {
     int rv = -1;
@@ -118,7 +151,7 @@ int host_connect(const char *host, const char *port, bool debug)
     err = getaddrinfo(host, port, &hints, &si);
     if (err) {
         fprintf(stderr, "getaddrinfo(): %s\n", gai_strerror(err));
-        return -1;
+        goto early_out;
     }
 
     for (struct addrinfo *p = si; p != NULL; p = p->ai_next) {
@@ -156,6 +189,8 @@ int host_connect(const char *host, const char *port, bool debug)
         // only use first addr, for now
         break;
     }
+
+  early_out:
     freeaddrinfo(si);
 
     return fd;
