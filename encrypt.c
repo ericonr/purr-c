@@ -27,6 +27,7 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
     ssize_t blocks = file_size / br_aes_big_BLOCK_SIZE;
     if (blocks * br_aes_big_BLOCK_SIZE < file_size) blocks++;
     file_size = blocks * br_aes_big_BLOCK_SIZE;
+    ssize_t padding = file_size - file.size;
 
     struct mmap_file rv = {.size = file_size, .prot = PROT_MEM, .flags = MAP_MEM};
 
@@ -39,7 +40,6 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
     }
 
     ssize_t err = getrandom(key, KEY_LEN, 0);
-    //ssize_t err = KEY_LEN;
     if (err != KEY_LEN) {
         fputs("getrandom() error!\n", stderr);
         return rv;
@@ -66,11 +66,8 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
     }
 
     memcpy(rv.data, file.data, file.size);
-    ssize_t i = 0;
-    for (; i < (file_size - file.size); i++) {
-        rv.data[file.size + i] = file.data[file.size + i];
-    }
-    // anonymous mapping -> subsequent padding bytes are already zero
+    // PKCS#5 padding
+    memset(rv.data + file.size, padding, padding);
 
     br_aes_big_cbcenc_keys br = { 0 };
     br_aes_big_cbcenc_init(&br, key, KEY_LEN);
@@ -158,9 +155,20 @@ struct mmap_file decrypt_mmap(struct mmap_file file, const uint8_t *key, const u
     br_aes_big_cbcdec_run(&br, iv_throwaway, rv.data, rv.size);
     free(iv_throwaway);
 
-    // kinda hacky, but not sure how to determine where padding starts otherwise
-    // TODO: look only at last block, perhaps?
-    rv.size = strlen((char *)rv.data);
+    // remove padding - only knows PKCS7
+    int padding = rv.data[rv.size - 1];
+    if (padding < br_aes_big_BLOCK_SIZE) {
+        // data might contain padding
+        bool found_padding = true;
+        for (int i = 0; i < padding; i++) {
+            if (rv.data[rv.size - 1 - i] != padding) {
+                found_padding = false;
+            }
+        }
+        if (found_padding) {
+            rv.size -= padding;
+        }
+    }
 
     return rv;
 }
