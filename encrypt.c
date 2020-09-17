@@ -121,7 +121,7 @@ struct mmap_file decrypt_mmap(struct mmap_file file, const uint8_t *key, const u
     rv.size = data_len;
     #endif /* DECODE_BASE_64 */
 
-    if (allocate_mmap(&rv)) {
+    if (!allocate_mmap(&rv)) {
         return rv;
     }
 
