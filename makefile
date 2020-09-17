@@ -3,8 +3,8 @@ PREFIX = /usr/local
 include config.mk
 
 OPT = -O2
-WARN = -Wall -Wextra -Werror=implicit
-CFLAGS += $(OPT) -g -pipe $(DEFS)
+WARN = -Wall -Wextra
+CFLAGS += -std=gnu99 $(OPT) -g -pipe -Werror=implicit $(DEFS)
 LDLIBS += -lbearssl
 LDFLAGS += -Wl,--as-needed
 INC += -Iextern
@@ -19,19 +19,20 @@ HEADERS = purr.h mmap_file.h
 OBJS = purr.o socket.o urls.o files.o comm.o formats.o encrypt.o mmap_file.o read_certs.o
 
 TEST = tests
-TOBJS = tests.o formats.o urls.o mmap_file.o
+TESTOBJS = tests.o
+TOBJS = formats.o urls.o mmap_file.o
 
 all: $(FINAL)
 
 check: $(TEST)
 	./tests
 
-$(OBJS) $(TOBJS): $(HEADERS) config.mk
-$(OBJS) $(TOBJS): CFLAGS += $(WARN)
+$(OBJS) $(TESTOBJS): $(HEADERS) config.mk
+$(OBJS) $(TESTOBJS): CFLAGS += $(WARN)
 encrypt.o: CFLAGS += $(INC)
 
 purr: $(OBJS) $(LIBS)
-tests: $(TOBJS) $(LIBS)
+tests: $(TESTOBJS) $(TOBJS) $(LIBS)
 
 $(BASEENCODEOBJS): extern/libbaseencode/common.h extern/libbaseencode/baseencode.h
 $(BASEENCODE): $(BASEENCODEOBJS)
@@ -43,4 +44,4 @@ install: $(FINAL)
 	ln -sf purr $(DESTDIR)$(PREFIX)/bin/meowd
 
 clean:
-	rm -f $(FINAL) $(OBJS) $(TEST) $(TOBJS) $(LIBS) $(LIBSOBJS)
+	rm -f $(FINAL) $(OBJS) $(TEST) $(TESTOBJS) $(TOBJS) $(LIBS) $(LIBSOBJS)
