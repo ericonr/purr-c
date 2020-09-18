@@ -9,34 +9,33 @@ LDLIBS += -lbearssl
 LDFLAGS += -Wl,--as-needed
 INC += -Iextern
 
-BASEENCODE = extern/libbaseencode/baseencode.a
 BASEENCODEOBJS = extern/libbaseencode/base64.o extern/libbaseencode/base32.o
-LIBS = $(BASEENCODE)
-LIBSOBJS = $(BASEENCODEOBJS)
+PURROBJS = socket.o urls.o files.o comm.o formats.o encrypt.o mmap_file.o read_certs.o
+LIBSOBJS = $(BASEENCODEOBJS) $(PURROBJS)
 
-FINAL = purr
-HEADERS = purr.h mmap_file.h
-OBJS = purr.o socket.o urls.o files.o comm.o formats.o encrypt.o mmap_file.o read_certs.o
+HEADERS = purr.h mmap_file.h read_certs.h
 
-TEST = tests
-TESTOBJS = tests.o
-TOBJS = formats.o urls.o mmap_file.o
+FINAL = purr gemi tests
+OBJS.purr = purr.o
+OBJS.gemi = gemi.o
+OBJS.tests = tests.o
+OBJS = $(foreach var,$(FINAL),$(OBJS.$(var)))
 
 all: $(FINAL)
 
-check: $(TEST)
+check: tests
 	./tests
 
 $(OBJS) $(TESTOBJS): $(HEADERS) config.mk
 $(OBJS) $(TESTOBJS): CFLAGS += $(WARN)
 encrypt.o: CFLAGS += $(INC)
 
-purr: $(OBJS) $(LIBS)
-tests: $(TESTOBJS) $(TOBJS) $(LIBS)
+purr: $(OBJS.$@) $(LIBSOBJS)
+gemi: $(OBJS.$@) $(LIBSOBJS)
+tests: $(OBJS.$@) $(LIBSOBJS)
 
 $(BASEENCODEOBJS): extern/libbaseencode/common.h extern/libbaseencode/baseencode.h
-$(BASEENCODE): $(BASEENCODEOBJS)
-	$(AR) r $@ $^
+$(PURROBJS): $(HEADERS)
 
 install: $(FINAL)
 	install -Dm755 purr $(DESTDIR)$(PREFIX)/bin
@@ -44,4 +43,4 @@ install: $(FINAL)
 	ln -sf purr $(DESTDIR)$(PREFIX)/bin/meowd
 
 clean:
-	rm -f $(FINAL) $(OBJS) $(TEST) $(TESTOBJS) $(TOBJS) $(LIBS) $(LIBSOBJS)
+	rm -f $(FINAL) $(OBJS) $(LIBS) $(LIBSOBJS)

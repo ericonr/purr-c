@@ -9,6 +9,7 @@
 
 #define HTTP_PORT 80
 #define HTTPS_PORT 443
+#define GEMINI_PORT 1965
 
 #define HEADER_MAX_LEN 8192
 
@@ -21,6 +22,11 @@
 #define ENCODE_BASE_64
 #define DECODE_BASE_64
 
+enum connection_type {
+HTTP_CONN = 0,
+GEMINI_CONN
+};
+
 struct connection_information {
     br_sslio_context *ioc;
     br_ssl_client_context *sc;
@@ -32,6 +38,7 @@ struct connection_information {
     int socket;
     bool send, ssl;
     bool no_strip, debug;
+    enum connection_type type;
 };
 
 struct transmission_information {
@@ -39,6 +46,7 @@ struct transmission_information {
     struct mmap_file *file;
     int socket;
     bool no_strip, debug, ssl;
+    enum connection_type type;
 };
 
 /* socket.c */

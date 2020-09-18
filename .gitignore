@@ -1,5 +1,6 @@
 purr
 tests
+gemi
 *.o
 *.a
 .gdb_history

@@ -8,7 +8,8 @@ int send_and_receive(struct connection_information *ci)
         {.ioc = ci->ioc,
          .no_strip = ci->no_strip, .debug = ci->debug,
          .socket = ci->socket,
-         .ssl = ci->ssl};
+         .ssl = ci->ssl,
+         .type = ci->type};
 
     ti.file = ci->input;
 

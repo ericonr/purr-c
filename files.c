@@ -12,16 +12,20 @@ struct strip_header_info {
     int counter, header_counter;
     int content_size;
     bool no_strip, debug;
+    enum connection_type type;
 };
+
+const int header_separator_len[] = { [HTTP_CONN] = 4, [GEMINI_CONN] = 2 };
+const char *header_separator[] = { [HTTP_CONN] = "\r\n\r\n", [GEMINI_CONN] = "\r\n" };
 
 static size_t fwrite_strip(const uint8_t *buf, int rlen, struct strip_header_info *st)
 {
-    const char *separator = "\r\n\r\n";
-    const int len = 4;
+    const char *separator = header_separator[st->type];
+    const int len = header_separator_len[st->type];
     int i = 0;
     if (st->counter != len) {
         for (; i < rlen; i++) {
-            // state machine to detect the HTTP header separator
+            // state machine to detect the HTTP or Gemini header separator
             if (buf[i] == separator[st->counter]) {
                 st->counter++;
             } else {
@@ -61,7 +65,10 @@ size_t ssl_to_mmap(struct transmission_information ti)
 {
     size_t rv = 0;
     struct strip_header_info st =
-        {.output = ti.file, .header = calloc(HEADER_MAX_LEN, 1), .debug = ti.debug, .no_strip = ti.no_strip};
+        {.output = ti.file,
+         .header = calloc(HEADER_MAX_LEN, 1),
+         .debug = ti.debug, .no_strip = ti.no_strip,
+         .type = ti.type};
     if (st.header == NULL) {
         perror("allocation failure");
         goto early_out;
@@ -85,22 +92,25 @@ size_t ssl_to_mmap(struct transmission_information ti)
         rv += fwrite_strip(tmp, rlen, &st);
 
         // check if header is done
-        if (st.counter == 4 && !tried_content_length) {
-            const char *needle = "Content-Length: ";
-            char *length = strstr(st.header, needle);
-            if (length == NULL) {
-                fputs("header didn't contain content-length field\n", stderr);
-                rv = 0;
-                goto early_out;
-            }
+        if (st.counter == header_separator_len[ti.type] && !tried_content_length) {
+            if (ti.type == HTTP_CONN) {
+                // http headers need to be parsed for content length
+                const char *needle = "Content-Length: ";
+                char *length = strstr(st.header, needle);
+                if (length == NULL) {
+                    fputs("header didn't contain content-length field\n", stderr);
+                    rv = 0;
+                    goto early_out;
+                }
 
-            transmission_size = atoll(length + strlen(needle));
-            if (transmission_size == 0) {
-                fputs("couldn't parse content-length\n", stderr);
-                rv = 0;
-                goto early_out;
-            }
+                transmission_size = atoll(length + strlen(needle));
+                if (transmission_size == 0) {
+                    fputs("couldn't parse content-length\n", stderr);
+                    rv = 0;
+                    goto early_out;
+                }
 
+            }
             tried_content_length = true;
         }
 

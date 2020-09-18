@@ -14,6 +14,7 @@
 
 static const char *http_sch = "http://";
 static const char *https_sch = "https://";
+static const char *gemini_sch = "gemini://";
 
 /*
  * This function cleans up the link in dirty, providing each of its parts in the
@@ -53,11 +54,17 @@ int clean_up_link(const char *dirty, char **schemep, char **cleanp, char **pathp
         strcpy(scheme, http_sch);
         start_link = dirty;
     } else {
+        if (scheme_separator - dirty + 3 > MAX_SHORTY_LEN) {
+            fputs("clean_up_link(): scheme is too long!\n", stderr);
+            return -1;
+        }
         memcpy(scheme, dirty, scheme_separator - dirty + 3);
         if (strcmp(scheme, https_sch) == 0) {
             portn = HTTPS_PORT;
         } else if (strcmp(scheme, http_sch) == 0) {
             portn = HTTP_PORT;
+        } else if (strcmp(scheme, gemini_sch) == 0) {
+            portn = GEMINI_PORT;
         } else {
             fputs("clean_up_link(): unknown protocol!\n", stderr);
             return -1;
