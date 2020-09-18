@@ -13,6 +13,14 @@ int send_and_receive(struct connection_information *ci)
     ti.file = ci->input;
 
     if (ti.ssl) {
+        if (ci->alpn_list) {
+            if (ci->debug) fputs("sending ALPN message\n", stderr);
+            br_ssl_engine_set_protocol_names(&ci->sc->eng, ci->alpn_list, ci->alpn_n);
+            if (br_ssl_engine_get_selected_protocol(&ci->sc->eng) == NULL) {
+                // don't treat as fatal error
+                if (ci->debug) fputs("error setting ALPN type\n", stderr);
+            }
+        }
         br_sslio_write_all(ci->ioc, ci->request, ci->request_size);
     } else {
         while (ci->request_size) {

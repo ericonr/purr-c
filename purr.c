@@ -17,6 +17,12 @@
 
 const char *progname;
 
+// value defined in
+// https://www.iana.org/assignments/tls-extensiontype-values/tls-extensiontype-values.xhtml#alpn-protocol-ids
+// used for https://tools.ietf.org/html/rfc7301
+const char *alpn_list[] = { "http/1.0" };
+const size_t alpn_n = 1;
+
 __attribute__ ((noreturn))
 static void usage(bool fail)
 {
@@ -229,6 +235,8 @@ int main (int argc, char **argv)
 
     // assemble request
     // based on https://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html
+    // using HTTP/1.0, to avoid implementation complexity
+    // https://stackoverflow.com/questions/246859/http-1-0-vs-1-1
     int written = 0;
     if (recv) {
         written = snprintf(request, going_to_write,
@@ -301,6 +309,7 @@ int main (int argc, char **argv)
 
     struct connection_information ci =
         {.ioc = &ioc, .sc = &sc,
+         .alpn_list = alpn_list, .alpn_n = alpn_n,
          .request = request, .request_size = written,
          .input = &input, .output = &output,
          .socket = socket,

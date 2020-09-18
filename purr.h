@@ -25,6 +25,8 @@ struct connection_information {
     br_sslio_context *ioc;
     br_ssl_client_context *sc;
     const char *request;
+    const char **alpn_list;
+    size_t alpn_n;
     size_t request_size;
     struct mmap_file *input, *output;
     int socket;
@@ -39,7 +41,7 @@ struct transmission_information {
     bool no_strip, debug, ssl;
 };
 
-/* sockets.c */
+/* socket.c */
 int socket_read(void *, uint8_t *, size_t);
 int socket_write(void *, const uint8_t *, size_t);
 
