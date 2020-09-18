@@ -53,7 +53,7 @@ static size_t fwrite_strip(const uint8_t *buf, int rlen, struct strip_header_inf
     // debug mode -> show header in stderr
     // otherwise -> hide header
     if (st->no_strip) {
-        fwrite(buf, 1, i, stdout);
+        write_into_mmap(st->output, buf, i);
     } else if (st->debug) {
         fwrite(buf, 1, i, stderr);
     }
