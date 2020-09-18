@@ -71,7 +71,7 @@ int clean_up_link(const char *dirty, char **schemep, char **cleanp, char **pathp
     char *slash = strchr(clean, '/');
     if (slash != NULL) {
         // copy to path
-        strlcpy(path, slash, 1024);
+        strlcpy(path, slash, allocate);
         // slashes found at the end of the link
         *slash = 0;
     } else {
@@ -151,7 +151,8 @@ int host_connect(const char *host, const char *port, bool debug)
     err = getaddrinfo(host, port, &hints, &si);
     if (err) {
         fprintf(stderr, "getaddrinfo(): %s\n", gai_strerror(err));
-        goto early_out;
+        // if there's an error, si isn't allocated
+        return fd;
     }
 
     for (struct addrinfo *p = si; p != NULL; p = p->ai_next) {
@@ -190,8 +191,6 @@ int host_connect(const char *host, const char *port, bool debug)
         break;
     }
 
-  early_out:
     freeaddrinfo(si);
-
     return fd;
 }
