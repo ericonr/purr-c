@@ -74,11 +74,13 @@ int clean_up_link(const char *dirty, char **schemep, char **cleanp, char **pathp
     }
 
     // maximum size necessary
-    strlcpy(clean, start_link, MAX_DOMAIN_LEN);
+    // use strncpy for portability
+    // fill up to buffer size minus 1, which is fine for termination, since buffer is calloc'd
+    strncpy(clean, start_link, MAX_DOMAIN_LEN - 1);
     char *slash = strchr(clean, '/');
     if (slash != NULL) {
         // copy to path
-        strlcpy(path, slash, allocate);
+        strncpy(path, slash, allocate - 1);
         // slashes found at the end of the link
         *slash = 0;
     } else {
