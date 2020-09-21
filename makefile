@@ -3,8 +3,8 @@ PREFIX = /usr/local
 include config.mk
 
 OPT = -O2
-WARN = -Wall -Wextra
-CFLAGS += -std=gnu99 $(OPT) -g -pipe -Werror=implicit $(DEFS)
+WARN = -Wall -Wextra -pedantic
+CFLAGS += -std=c99 $(OPT) -g -pipe -Werror=implicit $(DEFS)
 LDLIBS += -lbearssl
 LDFLAGS += -Wl,--as-needed
 INC += -Iextern
@@ -26,8 +26,8 @@ all: $(FINAL)
 check: tests
 	./tests
 
-$(OBJS) $(TESTOBJS): $(HEADERS) config.mk
-$(OBJS) $(TESTOBJS): CFLAGS += $(WARN)
+$(OBJS) $(PURROBJS): $(HEADERS) config.mk
+$(OBJS) $(PURROBJS): CFLAGS += $(WARN)
 encrypt.o: CFLAGS += $(INC)
 
 purr: $(OBJS.$@) $(LIBSOBJS)
@@ -35,7 +35,6 @@ gemi: $(OBJS.$@) $(LIBSOBJS)
 tests: $(OBJS.$@) $(LIBSOBJS)
 
 $(BASEENCODEOBJS): extern/libbaseencode/common.h extern/libbaseencode/baseencode.h
-$(PURROBJS): $(HEADERS)
 
 install: $(FINAL)
 	install -Dm755 purr $(DESTDIR)$(PREFIX)/bin

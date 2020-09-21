@@ -25,7 +25,7 @@ int send_and_receive(struct connection_information *ci)
         br_sslio_write_all(ci->ioc, ci->request, ci->request_size);
     } else {
         while (ci->request_size) {
-            ssize_t wlen;
+            int wlen;
             wlen = socket_write(&ci->socket, (uint8_t *)ci->request, ci->request_size);
             if (wlen > 0) ci->request_size -= wlen;
             // TODO: doesn't treat sending errors
