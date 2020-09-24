@@ -30,7 +30,7 @@ int main(int argc, char **argv)
     int rv = EXIT_FAILURE;
     bool debug = false, no_strip = false, browse = false;
 
-    const char *progpath = argv[0];
+    char *progpath = argv[0];
 
     int c;
     while ((c = getopt(argc, argv, "bndh")) != -1) {
@@ -57,8 +57,9 @@ int main(int argc, char **argv)
         usage(true);
     }
 
+    char *url = argv[0];
     char *scheme = NULL, *domain = NULL, *path = NULL, *port = NULL;
-    int portn = clean_up_link(argv[0], &scheme, &domain, &path, &port);
+    int portn = clean_up_link(url, &scheme, &domain, &path, &port);
     if (portn != GEMINI_PORT) {
         fputs("this isn't a gemini url!\n", stderr);
         goto early_out;
@@ -113,6 +114,7 @@ int main(int argc, char **argv)
          .debug = debug, .no_strip = no_strip,
          .type = GEMINI_CONN};
     rv = send_and_receive(&ci);
+    close(socket);
 
     bearssl_free_certs(&btas, num_ta);
 
@@ -135,9 +137,17 @@ int main(int argc, char **argv)
                 goto early_out;
             }
             fprintf(stderr, "Selected link: %d\n", in);
-            // TODO: navigation by picking a link, and trying to load it
-            // could go fancy and exec itself with another link as parameter
-            // use progpath
+            if (in >= 0 && in < n) {
+                // valid link number
+                char *new_path = get_gemini_node_by_n(head, in)->path;
+                fprintf(stderr, "Selected link: %s\n", new_path);
+                if (strstr(new_path, "gemini://") == NULL) {
+                    // link is not absolute path
+                    strcat(url, new_path);
+                }
+                char *new_argv[] = {progpath, "-b", url, NULL};
+                execvp(progpath, new_argv);
+            }
         }
     }
 
