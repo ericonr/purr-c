@@ -10,6 +10,8 @@
 #define HTTP_PORT 80
 #define HTTPS_PORT 443
 #define GEMINI_PORT 1965
+#define UNKNOWN_PORT -2
+#define NO_INFO_PORT -1
 
 #define HEADER_MAX_LEN 8192
 
@@ -54,6 +56,7 @@ int socket_read(void *, uint8_t *, size_t);
 int socket_write(void *, const uint8_t *, size_t);
 
 /* urls.c */
+int get_port_from_link(const char *);
 int clean_up_link(const char *, char **, char **, char **, char **);
 int get_encryption_params(char *, uint8_t **, uint8_t **);
 int host_connect(const char *, const char *, bool);

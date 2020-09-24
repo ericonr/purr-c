@@ -16,6 +16,32 @@ static const char *http_sch = "http://";
 static const char *https_sch = "https://";
 static const char *gemini_sch = "gemini://";
 
+int get_port_from_link(const char *url)
+{
+    int portn = -1;
+    const char *scheme_separator = strstr(url, "://");
+    if (scheme_separator) {
+        // found protocol specified, otherwise return error
+        if (scheme_separator - url + 3 > MAX_SHORTY_LEN) {
+            fputs("get_port_from_link(): scheme is too long!\n", stderr);
+            return portn;
+        }
+        size_t scheme_len = scheme_separator - url + 3;
+        if (memcmp(url, https_sch, scheme_len) == 0) {
+            portn = HTTPS_PORT;
+        } else if (memcmp(url, http_sch, scheme_len) == 0) {
+            portn = HTTP_PORT;
+        } else if (memcmp(url, gemini_sch, scheme_len) == 0) {
+            portn = GEMINI_PORT;
+        } else {
+            portn = UNKNOWN_PORT;
+            fputs("clean_up_link(): unknown protocol!\n", stderr);
+        }
+    }
+
+    return portn;
+}
+
 /*
  * This function cleans up the link in dirty, providing each of its parts in the
  * buffers pointed to by schemep, cleanp, pathp and portp.
@@ -46,32 +72,24 @@ int clean_up_link(const char *dirty, char **schemep, char **cleanp, char **pathp
     *portp = port;
 
     // detect protocol, remove protocol prefix
-    const char *scheme_separator = strstr(dirty, "://");
     const char *start_link = NULL;
-    if (scheme_separator == NULL) {
-        // no protocol specified, default to HTTP
+    portn = get_port_from_link(dirty);
+    bool get_scheme_len = true;
+    if (portn == UNKNOWN_PORT) {
+        fputs("clean_up_link(): unknown protocol!\n", stderr);
+        return portn;
+    } else if (portn == NO_INFO_PORT || portn == HTTP_PORT) {
+        // no scheme defined -> default to HTTP
+        // if no scheme defined -> no need to advance scheme
+        get_scheme_len = portn != NO_INFO_PORT;
         portn = HTTP_PORT;
         strcpy(scheme, http_sch);
-        start_link = dirty;
-    } else {
-        if (scheme_separator - dirty + 3 > MAX_SHORTY_LEN) {
-            fputs("clean_up_link(): scheme is too long!\n", stderr);
-            return -1;
-        }
-        memcpy(scheme, dirty, scheme_separator - dirty + 3);
-        if (strcmp(scheme, https_sch) == 0) {
-            portn = HTTPS_PORT;
-        } else if (strcmp(scheme, http_sch) == 0) {
-            portn = HTTP_PORT;
-        } else if (strcmp(scheme, gemini_sch) == 0) {
-            portn = GEMINI_PORT;
-        } else {
-            fputs("clean_up_link(): unknown protocol!\n", stderr);
-            return -1;
-        }
-
-        start_link = dirty + strlen(scheme);
+    } else if (portn == HTTPS_PORT) {
+        strcpy(scheme, https_sch);
+    } else if (portn == GEMINI_PORT) {
+        strcpy(scheme, gemini_sch);
     }
+    start_link = dirty + (get_scheme_len ? strlen(scheme) : 0);
 
     // maximum size necessary
     // use strncpy for portability

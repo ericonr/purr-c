@@ -114,9 +114,14 @@ int main(int argc, char **argv)
          .debug = debug, .no_strip = no_strip,
          .type = GEMINI_CONN};
     rv = send_and_receive(&ci);
+
+    // free resources
+    bearssl_free_certs(&btas, num_ta);
     close(socket);
 
-    bearssl_free_certs(&btas, num_ta);
+    if (rv == EXIT_FAILURE) {
+        goto early_out;
+    }
 
     // generic way of outputting data:
     // - if using FILE backend, offset is 0 and nothing happens
@@ -130,32 +135,49 @@ int main(int argc, char **argv)
             fputs("Input desired link (starts at 0): ", stderr);
             int in;
             int err = scanf("%d", &in);
-            if (err != 1) {
+            if (err == EOF) {
+                // exit cleanly on EOF
+                goto early_out;
+            } else if (err != 1) {
                 // TODO: ? option to show all found links
                 fputs("\nBad input!\n", stderr);
                 rv = EXIT_FAILURE;
                 goto early_out;
             }
             fprintf(stderr, "Selected link: %d\n", in);
+
+            // if it leaves this part, it's a bad exit
+            rv = EXIT_FAILURE;
             if (in >= 0 && in < n) {
-                // valid link number
-                char *new_path = get_gemini_node_by_n(head, in)->path;
-                fprintf(stderr, "Selected link: %s\n", new_path);
-                char *new_argv[] = {progpath, "-b", new_path, NULL};
-                if (strstr(new_path, "gemini://") == NULL) {
+                // in is a valid link number
+                char *new_arg = get_gemini_node_by_n(head, in)->path;
+                fprintf(stderr, "Selected link: %s\n", new_arg);
+                char *new_argv[] = {progpath, "-b", new_arg, NULL};
+                int new_portn = get_port_from_link(new_arg);
+                if (new_portn == NO_INFO_PORT) {
                     // link is not absolute path
                     // TODO: path resolution
                     // TODO: better error msgs
-                    char *new_url = calloc(1, strlen(url) + strlen(new_path) + 1);
+                    // TODO: treat error codes from server -> bad links (lacking trailing /, for example),
+                    // can probably be solved locally with a smarter client
+                    // Perhaps make header parsing a virtual function kind of thing?
+                    char *new_url = calloc(1, strlen(url) + strlen(new_arg) + 1);
                     if (new_url == NULL) {
                         perror("calloc()");
                         return rv;
                     }
-                    sprintf(new_url, "%s%s", url, new_path);
+                    sprintf(new_url, "%s%s", url, new_arg);
                     new_argv[2] = new_url;
+                } else if (new_portn != GEMINI_PORT) {
+                    fputs("\nUnsupported protocol!\n", stderr);
+                    goto early_out;
                 }
+
                 execvp(progpath, new_argv);
+            } else {
+                fputs("\nBad number!\n", stderr);
             }
+
         }
     }
 

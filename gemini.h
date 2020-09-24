@@ -9,7 +9,7 @@ struct gemini_link_node {
 };
 
 /* gemini.c */
-int get_links_from_gmi(const char*, struct gemini_link_node **);
+int get_links_from_gmi(const char *, struct gemini_link_node **);
 struct gemini_link_node *get_gemini_node_by_n(struct gemini_link_node *, int);
 
 #endif // __GEMINI_H_

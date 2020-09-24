@@ -82,6 +82,19 @@ int main()
         free(path); path = NULL;
         free(port); port = NULL;
 
+        dirty = "hello.com";
+        portn = clean_up_link(dirty, &scheme, &clean, &path, &port);
+        rv = compare_strings("http://", scheme, "clean_up_link") ? 1 : rv;
+        rv = compare_strings("hello.com", clean, "clean_up_link") ? 1 : rv;
+        rv = compare_strings("/", path, "clean_up_link") ? 1 : rv;
+        rv = compare_strings("80", port, "clean_up_link") ? 1 : rv;
+        assert(portn == HTTP_PORT);
+
+        free(scheme); scheme = NULL;
+        free(clean); clean = NULL;
+        free(path); path = NULL;
+        free(port); port = NULL;
+
         dirty = "https://bsd.ac/paste.html#sieqaqk_73fe_df51";
         portn = clean_up_link(dirty, &scheme, &clean, &path, &port);
         rv = compare_strings("https://", scheme, "clean_up_link") ? 1 : rv;
