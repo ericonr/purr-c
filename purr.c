@@ -145,24 +145,40 @@ int main (int argc, char **argv)
         }
     }
 
-    struct mmap_file input;
-    struct mmap_file output = create_mmap_from_file(NULL, PROT_MEM);
+    // output matters for all modes
+    FILE * output_print = stdout;
+    if (output_file && strcmp(output_file, "-")) {
+        output_print = fopen(output_file, "we");
+        if (output_print == NULL) {
+            perror("couldn't open output stream");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    // initialize, since we will free_mmap() them
+    struct mmap_file input = { 0 };
+    struct mmap_file output = { 0 };
+    if (encrypt) {
+        // encryption happens in-place,
+        // easiest way to do it is with mmap
+        output = create_mmap_from_file(NULL, PROT_MEM);
+    } else {
+        output = create_mmap_from_FILE(output_print, "w");
+    }
     if (ERROR_MMAP(output)) {
         perror("couldn't open output file");
         exit(EXIT_FAILURE);
     }
-    FILE * output_print = stdout;
+
+    // avoid warning about maybe-uninitialized url
+    // TODO: compiler bug?
+    if (!recv && !send) {
+        usage(true);
+    }
     char *url;
     if (recv) {
         if (argc != 2) {
             usage(true);
-        }
-        if (output_file && strcmp(output_file, "-")) {
-            output_print = fopen(output_file, "we");
-            if (output_print == NULL) {
-                perror("couldn't open output file");
-                exit(EXIT_FAILURE);
-            }
         }
 
         if (url_opt) {
@@ -362,6 +378,7 @@ int main (int argc, char **argv)
         output = decrypt_mmap(output, key, iv);
         fwrite(output.data, 1, output.size, output_print);
     } else if ((off_t)fwrite(output.data, 1, output.offset, output_print) < output.offset) {
+        // offset is 0 when use_stream is true, so no double printing is done
         fputs("might not have written all data\n", stderr);
     }
 
