@@ -38,7 +38,7 @@ static void usage(bool fail)
     } else {
        proghelp =
            "Usage: purr [options] <action> <file>|<url>\n"
-           "    action: send | recv\n";
+           "    action: s[end] | r[ecv]\n";
     }
 
     printf(
@@ -49,7 +49,7 @@ static void usage(bool fail)
         "    -p <port>: port to use for send\n"
         "    -o <output_file>: use file instead of stdout\n"
         "    -n: don't strip HTTP header from response\n"
-        "    -e: encrypt content\n"
+        "    -e: encrypt content: limited to 128KiB files\n"
         "    -d: debug\n"
         "    -h: show this dialog\n"
         "Environment:\n"
@@ -77,6 +77,8 @@ int main (int argc, char **argv)
     #error "no progname impl"
     #endif /* PROG_INVOCATION & GETPROGNAME */
 
+    // check program name:
+    // symlinks to original program with special behavior
     if (strcmp(progname, "meow") == 0) {
         // encrypted send mode
         send = true;
@@ -126,6 +128,7 @@ int main (int argc, char **argv)
     argv += optind;
 
     if (recv || send) {
+        // means the symlink variants are being used
         argc++;
         argv--;
     } else {
@@ -133,9 +136,9 @@ int main (int argc, char **argv)
             usage(true);
         }
 
-        if (strcmp(argv[0], "recv") == 0) {
+        if (strcmp(argv[0], "recv") == 0 || strcmp(argv[0], "r") == 0) {
             recv = true;
-        } else if (strcmp(argv[0], "send") == 0) {
+        } else if (strcmp(argv[0], "send") == 0 || strcmp(argv[0], "s") == 0) {
             send = true;
         } else {
             usage(true);
@@ -163,7 +166,7 @@ int main (int argc, char **argv)
         }
 
         if (url_opt) {
-            fputs("discarding url...\n", stderr);
+            fputs("discarding url arg...\n", stderr);
         }
         url = argv[1];
     } else if (send) {
