@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <unistd.h>
 
 #include "purr.h"
 #include "mmap_file.h"
 #include "read_certs.h"
+#include "gemini.h"
 
 #define GEMINI_REQUEST 1024
 
@@ -12,7 +14,12 @@ __attribute__ ((noreturn))
 static void usage(bool fail)
 {
     printf(
-        "Usage: gemi <url>\n"
+        "Usage: gemi [options] <url>\n"
+        "Options:\n"
+        "    -b: browse mode (experimental)\n"
+        "    -n: don't strip header\n"
+        "    -d: debug\n"
+        "    -h: show this dialog\n"
     );
 
     exit(fail? EXIT_FAILURE : EXIT_SUCCESS);
@@ -20,15 +27,38 @@ static void usage(bool fail)
 
 int main(int argc, char **argv)
 {
-    int rv = EXIT_SUCCESS;
-    bool debug = false, no_strip = false;
+    int rv = EXIT_FAILURE;
+    bool debug = false, no_strip = false, browse = false;
 
-    if (argc != 2) {
+    const char *progpath = argv[0];
+
+    int c;
+    while ((c = getopt(argc, argv, "bndh")) != -1) {
+        switch (c) {
+            case 'b':
+                browse = true;
+                break;
+            case 'n':
+                no_strip = true;
+                break;
+            case 'd':
+                debug = true;
+                break;
+            case 'h':
+                usage(false);
+            default:
+                usage(true);
+        }
+    }
+    argc -= optind;
+    argv += optind;
+
+    if (argc != 1) {
         usage(true);
     }
 
     char *scheme = NULL, *domain = NULL, *path = NULL, *port = NULL;
-    int portn = clean_up_link(argv[1], &scheme, &domain, &path, &port);
+    int portn = clean_up_link(argv[0], &scheme, &domain, &path, &port);
     if (portn != GEMINI_PORT) {
         fputs("this isn't a gemini url!\n", stderr);
         goto early_out;
@@ -64,7 +94,17 @@ int main(int argc, char **argv)
 
     signal(SIGPIPE, SIG_IGN);
 
-    struct mmap_file output = create_mmap_from_file(NULL, PROT_MEM);
+    // writes directly into stdout
+    struct mmap_file output;
+    if (browse) {
+        output = create_mmap_from_file(NULL, PROT_MEM);
+    } else {
+        output = create_mmap_from_FILE(stdout, "w");
+    }
+    if (ERROR_MMAP(output)) {
+        return rv;
+    }
+
     struct connection_information ci =
         {.ioc = &ioc, .sc =&sc,
          .request = request, .request_size = written,
@@ -76,7 +116,30 @@ int main(int argc, char **argv)
 
     bearssl_free_certs(&btas, num_ta);
 
-    fwrite(output.data, 1, output.size, stdout);
+    // generic way of outputting data:
+    // - if using FILE backend, offset is 0 and nothing happens
+    // - if using memory backend, offset is used
+    fwrite(output.data, 1, output.offset, stdout);
+    if (browse) {
+        struct gemini_link_node *head = NULL;
+        int n = get_links_from_gmi((char *)output.data, &head);
+        fprintf(stderr, "Links found: %d\n", n);
+        if (n > 0) {
+            fputs("Input desired link (starts at 0): ", stderr);
+            int in;
+            int err = scanf("%d", &in);
+            if (err != 1) {
+                // TODO: ? option to show all found links
+                fputs("\nBad input!\n", stderr);
+                rv = EXIT_FAILURE;
+                goto early_out;
+            }
+            fprintf(stderr, "Selected link: %d\n", in);
+            // TODO: navigation by picking a link, and trying to load it
+            // could go fancy and exec itself with another link as parameter
+            // use progpath
+        }
+    }
 
   early_out:
     free(scheme);

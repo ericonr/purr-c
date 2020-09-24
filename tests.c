@@ -6,13 +6,14 @@
 
 #include "purr.h"
 #include "mmap_file.h"
+#include "gemini.h"
 
 static int compare_strings(const char *expected, const char *result, const char *function)
 {
     int rv = 0;
 
     printf("%s(): ", function);
-    if (strcmp(expected, result)) {
+    if (result == NULL || strcmp(expected, result)) {
         rv = 1;
         puts("failure");
         printf("expected: %s\ngot: %s\n", expected, result);
@@ -111,6 +112,25 @@ int main()
         RESET_MMAP(f);
         read_from_mmap(&f, write_size);
         rv = compare_arrays(data, f.data, write_size, "{write_into,read_from}_mmap") ? 1 : rv;
+    }
+
+    {
+        /* gemini.c */
+        const char *gmi_file = "=> aha/ Aha";
+        struct gemini_link_node *head = NULL;
+        int n = get_links_from_gmi(gmi_file, &head);
+        rv = compare_strings("aha/", head->path, "get_links_from_gmi") ? 1 : rv;
+        rv = compare_strings("Aha", head->name, "get_links_from_gmi") ? 1 : rv;
+        assert(n == 1);
+
+        gmi_file = "=>  two-a  Two spaces\r\n=>   three\tThree";
+        head = NULL;
+        n = get_links_from_gmi(gmi_file, &head);
+        rv = compare_strings("two-a", head->path, "get_links_from_gmi") ? 1 : rv;
+        rv = compare_strings("Two spaces", head->name, "get_links_from_gmi") ? 1 : rv;
+        rv = compare_strings("three", head->next->path, "get_links_from_gmi") ? 1 : rv;
+        rv = compare_strings("Three", head->next->name, "get_links_from_gmi") ? 1 : rv;
+        assert(n == 2);
     }
 
     return rv;

@@ -26,9 +26,36 @@ void free_mmap(struct mmap_file *f)
     if (f->data == MAP_FAILED || f->data == NULL) {
         return;
     }
-    munmap(f->data, f->size);
+
+    if (f->use_stream) {
+        fclose(f->stream);
+    } else {
+        munmap(f->data, f->size);
+    }
+
     f->data = NULL;
     f->size = 0;
+}
+
+struct mmap_file create_mmap_from_FILE(FILE *stream, const char *mode)
+{
+    struct mmap_file rv = { 0 };
+    if (*mode == 'w') {
+        rv.prot = PROT_WRITE;
+    } else if (*mode == 'r') {
+        rv.prot = PROT_READ;
+    } else {
+        // show caller that they used the wrong values
+        errno = EINVAL;
+        return rv;
+    }
+
+    rv.stream = stream;
+    rv.use_stream = true;
+    // make data pointer valid, for error checking
+    rv.data = (void *)0x01;
+
+    return rv;
 }
 
 struct mmap_file create_mmap_from_file(const char *name, int prot)
@@ -90,7 +117,7 @@ int read_from_mmap(struct mmap_file *file, int n)
     }
 
     ssize_t max = file->size - file->offset;
-    file->cursor = file->data + file->offset;
+    const uint8_t *cursor = file->data + file->offset;
     if (n < max) {
         // can fit the read
         file->offset += n;
@@ -107,12 +134,19 @@ int write_into_mmap(struct mmap_file *file, const uint8_t *buffer, int n)
 {
     assert(file->prot & PROT_WRITE);
 
+    // short circuiting logic for writing into a file directly
+    if (file->use_stream) {
+        n = fwrite(buffer, 1, n, file->stream);
+        file->size += n;
+        return n;
+    }
+
     if (file->size == file->offset) {
         return -1;
     }
 
     ssize_t max = file->size - file->offset;
-    file->cursor = file->data + file->offset;
+    uint8_t *cursor = file->data + file->offset;
     if (n < max) {
         file->offset += n;
     } else {
@@ -120,7 +154,6 @@ int write_into_mmap(struct mmap_file *file, const uint8_t *buffer, int n)
         n = max;
     }
 
-    memcpy(file->cursor, buffer, n);
-
+    memcpy(cursor, buffer, n);
     return n;
 }
