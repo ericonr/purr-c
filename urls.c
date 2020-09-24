@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200112L /* addrinfo */
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>

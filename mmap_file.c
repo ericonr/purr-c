@@ -1,3 +1,4 @@
+#define _DEFAULT_SOURCE /* MAP_ANONYMOUS */
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
@@ -10,6 +11,9 @@
 #include <sys/mman.h>
 
 #include "mmap_file.h"
+
+const int PROT_MEM = PROT_WRITE | PROT_READ;
+const int MAP_MEM = MAP_ANONYMOUS | MAP_PRIVATE;
 
 bool allocate_mmap(struct mmap_file *f)
 {

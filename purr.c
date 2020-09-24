@@ -1,7 +1,9 @@
+#define _XOPEN_SOURCE /* getopt */
+
 #ifdef HAVE_PROG_INVOCATION
-#define _GNU_SOURCE
+#define _GNU_SOURCE /* program_invocation_short_name */
 #include <errno.h>
-#endif
+#endif /* HAVE_PROG_INVOCATION */
 
 #include <signal.h>
 #include <stdbool.h>

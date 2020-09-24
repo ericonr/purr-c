@@ -10,8 +10,8 @@
 #define ERROR_MMAP(file) ((file).data == MAP_FAILED || (file).data == NULL)
 
 // definitions for memory backed mappings
-#define PROT_MEM (PROT_WRITE | PROT_READ)
-#define MAP_MEM (MAP_ANONYMOUS | MAP_PRIVATE)
+extern const int PROT_MEM;
+extern const int MAP_MEM;
 
 // 128KiB
 #define OUTPUT_FILE_SIZE (128 * 1024)
