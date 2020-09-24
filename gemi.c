@@ -141,11 +141,19 @@ int main(int argc, char **argv)
                 // valid link number
                 char *new_path = get_gemini_node_by_n(head, in)->path;
                 fprintf(stderr, "Selected link: %s\n", new_path);
+                char *new_argv[] = {progpath, "-b", new_path, NULL};
                 if (strstr(new_path, "gemini://") == NULL) {
                     // link is not absolute path
-                    strcat(url, new_path);
+                    // TODO: path resolution
+                    // TODO: better error msgs
+                    char *new_url = calloc(1, strlen(url) + strlen(new_path) + 1);
+                    if (new_url == NULL) {
+                        perror("calloc()");
+                        return rv;
+                    }
+                    sprintf(new_url, "%s%s", url, new_path);
+                    new_argv[2] = new_url;
                 }
-                char *new_argv[] = {progpath, "-b", url, NULL};
                 execvp(progpath, new_argv);
             }
         }
