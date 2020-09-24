@@ -107,9 +107,14 @@ struct mmap_file create_mmap_from_file(const char *name, int prot)
     return rv;
 }
 
-int read_from_mmap(struct mmap_file *file, int n)
+int read_from_mmap(struct mmap_file *file, uint8_t *buffer, int n)
 {
     assert(file->prot & PROT_READ);
+
+    if (file->use_stream) {
+        // TODO: returns bogus values, transmissions end up empty
+        return fread(buffer, 1, n, file->stream);
+    }
 
     if (file->size == file->offset) {
         // can't read any more
@@ -127,6 +132,7 @@ int read_from_mmap(struct mmap_file *file, int n)
         n = max;
     }
 
+    memcpy(buffer, cursor, n);
     return n;
 }
 

@@ -29,7 +29,7 @@ bool allocate_mmap(struct mmap_file *);
 void free_mmap(struct mmap_file *);
 struct mmap_file create_mmap_from_FILE(FILE *, const char *);
 struct mmap_file create_mmap_from_file(const char *, int);
-int read_from_mmap(struct mmap_file *, int);
+int read_from_mmap(struct mmap_file *, uint8_t *, int);
 int write_into_mmap(struct mmap_file *, const uint8_t *, int);
 
 /* encrypt.c */

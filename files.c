@@ -132,15 +132,16 @@ size_t mmap_to_ssl(struct transmission_information ti)
 {
     size_t rv = 0;
     while (1) {
-        int wlen = read_from_mmap(ti.file, NET_BLOCK_SIZE);
+        uint8_t tmp[NET_BLOCK_SIZE];
+        int wlen = read_from_mmap(ti.file, tmp, NET_BLOCK_SIZE);
         int err = 0;
         if (ti.ssl) {
-            err = br_sslio_write_all(ti.ioc, ti.file->cursor, wlen);
+            err = br_sslio_write_all(ti.ioc, tmp, wlen);
         } else {
             ssize_t wlen_local = wlen;
             while (wlen_local) {
                 ssize_t written =
-                    socket_write(&ti.socket, ti.file->cursor + (wlen - wlen_local), wlen_local);
+                    socket_write(&ti.socket, tmp + (wlen - wlen_local), wlen_local);
                 if (written > 0) wlen_local -= written;
                 // TODO: add error checking
                 err = 0;

@@ -102,6 +102,7 @@ int main()
     {
         /* mmap_file.c */
         int write_size = 1024 * 1024;
+        uint8_t *tmp = calloc(write_size, 4);
         struct mmap_file f = {.size = 2 * write_size, .prot = PROT_MEM, .flags = MAP_MEM};
         assert(allocate_mmap(&f));
         uint8_t *data = malloc(write_size);
@@ -110,7 +111,7 @@ int main()
         int written = write_into_mmap(&f, data, write_size);
         assert(f.offset == written);
         RESET_MMAP(f);
-        read_from_mmap(&f, write_size);
+        read_from_mmap(&f, tmp, write_size);
         rv = compare_arrays(data, f.data, write_size, "{write_into,read_from}_mmap") ? 1 : rv;
     }
 
