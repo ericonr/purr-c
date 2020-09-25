@@ -98,8 +98,19 @@ int get_links_from_gmi(const char *text, struct gemini_link_node **nodes)
 }
 
 /*
-** Expects linked lists with at least n members
-*/
+ * Expects linked lists with at least 1 member
+ */
+void print_gemini_nodes(struct gemini_link_node *head, FILE *stream)
+{
+    int i = 0;
+    do {
+        fprintf(stream, "#%02d path: %s - name: %s\n", i++, head->path, head->name);
+    } while ((head = head->next));
+}
+
+/*
+ * Expects linked lists with at least n members
+ */
 struct gemini_link_node *get_gemini_node_by_n(struct gemini_link_node *head, int n)
 {
     struct gemini_link_node *rv = head;

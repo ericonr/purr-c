@@ -133,26 +133,56 @@ int main(int argc, char **argv)
         int n = get_links_from_gmi((char *)output.data, &head);
         fprintf(stderr, "Links found: %d\n", n);
         if (n > 0) {
-            fputs("Input desired link (starts at 0): ", stderr);
-            int in;
-            int err = scanf("%d", &in);
-            if (err == EOF) {
-                // exit cleanly on EOF
-                goto early_out;
-            } else if (err != 1) {
-                // TODO: ? option to show all found links
-                fputs("\nBad input!\n", stderr);
-                rv = EXIT_FAILURE;
-                goto early_out;
-            }
-            fprintf(stderr, "Selected link: %d\n", in);
+            while (1) {
+                fputs("Input link number (starts at 0) or control char ('?' or 'i'): ", stderr);
+                int in;
+                int err = scanf("%d", &in);
+                char *new_arg;
+                if (err == EOF) {
+                    // exit cleanly on EOF
+                    rv = EXIT_SUCCESS;
+                    goto early_out;
+                } else if (err == 1) {
+                    // if it leaves this part, it's a bad exit
+                    rv = EXIT_FAILURE;
 
-            // if it leaves this part, it's a bad exit
-            rv = EXIT_FAILURE;
-            if (in >= 0 && in < n) {
-                // in is a valid link number
-                char *new_arg = get_gemini_node_by_n(head, in)->path;
-                fprintf(stderr, "Selected link: %s\n", new_arg);
+                    if (in >= 0 && in < n) {
+                        // in is a valid link number
+                        new_arg = get_gemini_node_by_n(head, in)->path;
+                        fprintf(stderr, "Selected link: #%02d: %s\n", in, new_arg);
+                    } else {
+                        fprintf(stderr, "Bad number: %d\n", in);
+                        continue;
+                    }
+                } else {
+                    // if it leaves this part, it's a bad exit
+                    rv = EXIT_FAILURE;
+
+                    // use character controls
+                    char pick = fgetc(stdin);
+                    if (pick == '?') {
+                        print_gemini_nodes(head, stderr);
+                        continue;
+                    } else if (pick == 'i') {
+                        // XXX: doesn't leak, because the application will necessarily exit
+                        new_arg = calloc(1, 1024);
+                        if (new_arg == NULL) {
+                            perror("calloc()");
+                            goto early_out;
+                        }
+                        fputs("Input new link or path: ", stderr);
+                        err = scanf("%1023s", new_arg);
+                        if (err == EOF) {
+                            // clean exit on EOF
+                            rv = EXIT_SUCCESS;
+                            goto early_out;
+                        }
+                    } else {
+                        fputs("Bad input!\n", stderr);
+                        continue;
+                    }
+                }
+
                 char *new_argv[] = {progpath, "-b", new_arg, NULL};
                 int new_portn = get_port_from_link(new_arg);
                 if (new_portn == NO_INFO_PORT) {
@@ -165,20 +195,17 @@ int main(int argc, char **argv)
                     char *new_url = calloc(1, strlen(url) + strlen(new_arg) + 1);
                     if (new_url == NULL) {
                         perror("calloc()");
-                        return rv;
+                        goto early_out;
                     }
                     sprintf(new_url, "%s%s", url, new_arg);
                     new_argv[2] = new_url;
                 } else if (new_portn != GEMINI_PORT) {
-                    fputs("\nUnsupported protocol!\n", stderr);
+                    fputs("Unsupported protocol!\n", stderr);
                     goto early_out;
                 }
 
                 execvp(progpath, new_argv);
-            } else {
-                fputs("\nBad number!\n", stderr);
             }
-
         }
     }
 
