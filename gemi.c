@@ -31,10 +31,8 @@ int main(int argc, char **argv)
     int rv = EXIT_FAILURE;
     bool debug = false, no_strip = false, browse = false;
 
-    char *progpath = argv[0];
-
     int c;
-    while ((c = getopt(argc, argv, "bndh")) != -1) {
+    while ((c = getopt(argc, argv, "+bndh")) != -1) {
         switch (c) {
             case 'b':
                 browse = true;
@@ -51,6 +49,18 @@ int main(int argc, char **argv)
                 usage(true);
         }
     }
+
+    // store how to call myself
+    char *progpath = argv[0];
+    // 32 is an arbitrary number assumed to be big enough for arguments
+    char *new_argv[32] = {progpath, NULL};
+    // needs to leave the last two positions for the new arg and a NULL pointer
+    for (int i = 1; i < 32 - 2 && i < optind; i++) {
+        new_argv[i] = argv[i];
+    }
+    // index for where to store the new arg
+    const int new_arg_pos = optind;
+
     argc -= optind;
     argv += optind;
 
@@ -58,13 +68,16 @@ int main(int argc, char **argv)
         usage(true);
     }
 
-    char *url = argv[0];
+    const char *url = argv[0];
     char *scheme = NULL, *domain = NULL, *path = NULL, *port = NULL;
     int portn = clean_up_link(url, &scheme, &domain, &path, &port);
     if (portn != GEMINI_PORT) {
         fputs("this isn't a gemini url!\n", stderr);
         goto early_out;
     }
+    // shouldn't need to normalize path output for things such as trailing slash,
+    // since redirects should take care of most cases
+
     int socket = host_connect(domain, port, debug);
     if (socket < 0) {
         fputs("host_connect(): couldn't open socket or find domain\n", stderr);
@@ -113,12 +126,20 @@ int main(int argc, char **argv)
          .output = &output,
          .ssl = true, .send = false,
          .debug = debug, .no_strip = no_strip,
-         .type = GEMINI_CONN};
+         .type = GEMINI_CONN, .header_callback = store_gemini_redirect_link};
     rv = send_and_receive(&ci);
 
     // free resources
     bearssl_free_certs(&btas, num_ta);
     close(socket);
+
+    if (redirect_link) {
+        // redirect link was stored in callback
+        // TODO: link still has '\r\n', prints double new line
+        fprintf(stderr, "redirecting to %s...\n", redirect_link);
+        new_argv[new_arg_pos] = redirect_link;
+        execvp(progpath, new_argv);
+    }
 
     if (rv == EXIT_FAILURE) {
         goto early_out;
@@ -183,7 +204,7 @@ int main(int argc, char **argv)
                     }
                 }
 
-                char *new_argv[] = {progpath, "-b", new_arg, NULL};
+                new_argv[new_arg_pos] = new_arg;
                 int new_portn = get_port_from_link(new_arg);
                 if (new_portn == NO_INFO_PORT) {
                     // link is not absolute path
@@ -197,8 +218,8 @@ int main(int argc, char **argv)
                         perror("calloc()");
                         goto early_out;
                     }
-                    sprintf(new_url, "%s%s", url, new_arg);
-                    new_argv[2] = new_url;
+                    sprintf(new_url, "%s%s%s%s", scheme, domain, path, new_arg);
+                    new_argv[new_arg_pos] = new_url;
                 } else if (new_portn != GEMINI_PORT) {
                     fputs("Unsupported protocol!\n", stderr);
                     goto early_out;
