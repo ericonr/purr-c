@@ -151,15 +151,15 @@ int main(int argc, char **argv)
         redirections += 1;
         // redirect link was stored in callback
         fprintf(stderr, "redirecting to %s...\n", redirect_link);
-        if (0 && strcmp(redirect_link, url) == 0) {
+        if (strcmp(redirect_link, url) == 0) {
             rv = EXIT_FAILURE;
             fputs("error: redirect loop detected!\n", stderr);
             goto early_out;
         }
 
         if (redirections > 4) {
-            fputs("error: too many redirections!\n", stderr);
             rv = EXIT_FAILURE;
+            fputs("error: too many redirections!\n", stderr);
             goto early_out;
         }
         char redirections_s[24] = { 0 };
