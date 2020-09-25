@@ -1,3 +1,4 @@
+#define _XOPEN_SOURCE 500
 #include <stdlib.h>
 #include <unistd.h>
 #include <assert.h>
@@ -75,7 +76,7 @@ size_t ssl_to_mmap(struct transmission_information ti)
     }
 
     size_t transmission_size = 0;
-    bool tried_content_length = false;
+    bool parsed_header = false;
     while (1) {
         uint8_t tmp[512];
         int rlen;
@@ -92,7 +93,9 @@ size_t ssl_to_mmap(struct transmission_information ti)
         rv += fwrite_strip(tmp, rlen, &st);
 
         // check if header is done
-        if (st.counter == header_separator_len[ti.type] && !tried_content_length) {
+        if (st.counter == header_separator_len[ti.type] && !parsed_header) {
+            parsed_header = true;
+
             if (ti.type == HTTP_CONN) {
                 // http headers need to be parsed for content length
                 const char *needle = "Content-Length: ";
@@ -109,9 +112,52 @@ size_t ssl_to_mmap(struct transmission_information ti)
                     rv = 0;
                     goto early_out;
                 }
+            } else if (ti.type == GEMINI_CONN) {
+                // gemini headers can be checked for information
+                // <STATUS: 2 chars><SPACE><META>
+                char first = st.header[0], second = st.header[1], *meta = st.header + 2;
+                if (first < '1' || first > '6' || second < '0' || second > '9' || *meta != ' ') {
+                    fputs("out-of-spec header!\n", stderr);
+                    goto early_out;
+                }
+                // eat the space
+                meta++;
 
+                if (ti.header_callback) {
+                    ti.header_callback(first, strdup(meta));
+                }
+
+                switch (first) {
+                    case '1':
+                        fputs("INPUT not supported\n", stderr);
+                        rv = 0;
+                        goto early_out;
+                        break;
+                    case '2':
+                        if (ti.debug) fprintf(stderr, "success code: %c mime: %s\n", second, meta);
+                        break;
+                    case '3':
+                        fprintf(stderr, "redirect code: %c url: %s\n", second, meta);
+                        rv = 0;
+                        goto early_out;
+                        break;
+                    case '4':
+                        fprintf(stderr, "temp failure code: %c msg: %s\n", second, meta);
+                        rv = 0;
+                        goto early_out;
+                        break;
+                    case '5':
+                        fprintf(stderr, "perm failure code: %c msg: %s\n", second, meta);
+                        rv = 0;
+                        goto early_out;
+                        break;
+                    case '6':
+                        fprintf(stderr, "client cert code: %c msg: %s\n", second, meta);
+                        rv = 0;
+                        goto early_out;
+                        break;
+                }
             }
-            tried_content_length = true;
         }
 
         if (transmission_size) {

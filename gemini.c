@@ -8,6 +8,8 @@
 #define MAX_NUM_LINKS 1024
 #define MAX_LINK_LEN 1024
 
+char *redirect_link = NULL;
+
 static struct gemini_link_node *gimme_node(void)
 {
     struct gemini_link_node *node = calloc(1, sizeof *node);
@@ -118,4 +120,10 @@ struct gemini_link_node *get_gemini_node_by_n(struct gemini_link_node *head, int
         rv = rv->next;
     }
     return rv;
+}
+
+void store_gemini_redirect_link(int s, char *l)
+{
+    // only store URL if it is a redirect
+    if (s == '3') redirect_link = l;
 }

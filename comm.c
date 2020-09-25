@@ -9,7 +9,8 @@ int send_and_receive(struct connection_information *ci)
          .no_strip = ci->no_strip, .debug = ci->debug,
          .socket = ci->socket,
          .ssl = ci->ssl,
-         .type = ci->type};
+         .type = ci->type,
+         .header_callback = ci->header_callback};
 
     ti.file = ci->input;
 

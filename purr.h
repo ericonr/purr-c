@@ -29,6 +29,11 @@ HTTP_CONN = 0,
 GEMINI_CONN
 };
 
+// callback for passing header information:
+// int - status
+// char * - relevant part of header
+typedef void (*header_callback_def)(int, char *);
+
 struct connection_information {
     br_sslio_context *ioc;
     br_ssl_client_context *sc;
@@ -41,6 +46,7 @@ struct connection_information {
     bool send, ssl;
     bool no_strip, debug;
     enum connection_type type;
+    header_callback_def header_callback;
 };
 
 struct transmission_information {
@@ -49,6 +55,7 @@ struct transmission_information {
     int socket;
     bool no_strip, debug, ssl;
     enum connection_type type;
+    header_callback_def header_callback;
 };
 
 /* socket.c */
