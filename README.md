@@ -76,7 +76,8 @@ into itself with the new link. This method of operation is currently quite
 limited, due to lacking path normalization functions that deal with more complex
 links (such as `../../docs`).
 
-Furthermore, server responses, such as redirects, aren't dealt with cleanly.
+It now supports parsing server messages, including redirects. However, these
+mechanisms are currently quite verbose.
 
 #### Usage
 

@@ -21,6 +21,7 @@ static void usage(bool fail)
         "    -n: don't strip header\n"
         "    -d: debug\n"
         "    -h: show this dialog\n"
+        "    -r: number of redirections (internal use)\n"
     );
 
     exit(fail? EXIT_FAILURE : EXIT_SUCCESS);
@@ -30,9 +31,10 @@ int main(int argc, char **argv)
 {
     int rv = EXIT_FAILURE;
     bool debug = false, no_strip = false, browse = false;
+    int redirections = 0, redirections_pos = 0;
 
     int c;
-    while ((c = getopt(argc, argv, "+bndh")) != -1) {
+    while ((c = getopt(argc, argv, "+bndhr:")) != -1) {
         switch (c) {
             case 'b':
                 browse = true;
@@ -45,6 +47,10 @@ int main(int argc, char **argv)
                 break;
             case 'h':
                 usage(false);
+            case 'r':
+                redirections = atoi(optarg);
+                redirections_pos = optind - 1;
+                break;
             default:
                 usage(true);
         }
@@ -57,6 +63,10 @@ int main(int argc, char **argv)
     // needs to leave the last two positions for the new arg and a NULL pointer
     for (int i = 1; i < 32 - 2 && i < optind; i++) {
         new_argv[i] = argv[i];
+    }
+    // zero out the redirection counter
+    if (redirections_pos) {
+        new_argv[redirections_pos] = "0";
     }
     // index for where to store the new arg
     const int new_arg_pos = optind;
@@ -133,16 +143,39 @@ int main(int argc, char **argv)
     bearssl_free_certs(&btas, num_ta);
     close(socket);
 
-    if (redirect_link) {
-        // redirect link was stored in callback
-        // TODO: link still has '\r\n', prints double new line
-        fprintf(stderr, "redirecting to %s...\n", redirect_link);
-        new_argv[new_arg_pos] = redirect_link;
-        execvp(progpath, new_argv);
-    }
-
     if (rv == EXIT_FAILURE) {
         goto early_out;
+    }
+
+    if (redirect_link) {
+        redirections += 1;
+        // redirect link was stored in callback
+        fprintf(stderr, "redirecting to %s...\n", redirect_link);
+        if (0 && strcmp(redirect_link, url) == 0) {
+            rv = EXIT_FAILURE;
+            fputs("error: redirect loop detected!\n", stderr);
+            goto early_out;
+        }
+
+        if (redirections > 4) {
+            fputs("error: too many redirections!\n", stderr);
+            rv = EXIT_FAILURE;
+            goto early_out;
+        }
+        char redirections_s[24] = { 0 };
+        sprintf(redirections_s, "%02d", redirections);
+
+        if (redirections_pos) {
+            // replace current -r arg
+            new_argv[redirections_pos] = redirections_s;
+            new_argv[new_arg_pos] = redirect_link;
+        } else {
+            // add -r arg
+            new_argv[new_arg_pos] = "-r";
+            new_argv[new_arg_pos + 1] = redirections_s;
+            new_argv[new_arg_pos + 2] = redirect_link;
+        }
+        execvp(progpath, new_argv);
     }
 
     // generic way of outputting data:

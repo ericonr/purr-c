@@ -124,6 +124,11 @@ struct gemini_link_node *get_gemini_node_by_n(struct gemini_link_node *head, int
 
 void store_gemini_redirect_link(int s, char *l)
 {
-    // only store URL if it is a redirect
-    if (s == '3') redirect_link = l;
+    // only store URL if it is a redirect.
+    // this comes from a header, so will always end with \r\n
+    // cut \r
+    if (s == '3') {
+        redirect_link = l;
+        *(strchr(redirect_link, '\r')) = 0;
+    }
 }
