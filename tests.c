@@ -16,7 +16,7 @@ static int compare_strings(const char *expected, const char *result, const char 
     if (result == NULL || strcmp(expected, result)) {
         rv = 1;
         puts("failure");
-        printf("expected: %s\ngot: %s\n", expected, result);
+        printf("  expected: %s\n  got: %s\n", expected, result);
     } else {
         puts("success");
     }
@@ -32,7 +32,7 @@ static int compare_arrays(const uint8_t *expected, const uint8_t *result, size_t
     if (memcmp(expected, result, len)) {
         rv = 1;
         puts("failure");
-        printf("expected: %s\ngot: %s\n", print_hex(expected, len, false), print_hex(result, len, false));
+        printf("  expected: %s\n  got: %s\n", print_hex(expected, len, false), print_hex(result, len, false));
     } else {
         puts("success");
     }
