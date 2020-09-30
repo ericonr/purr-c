@@ -28,15 +28,13 @@ all: $(FINAL)
 check: tests
 	./tests
 
+$(BASEENCODEOBJS): extern/libbaseencode/common.h extern/libbaseencode/baseencode.h
+
 $(OBJS) $(PURROBJS): $(HEADERS) config.mk
 $(OBJS) $(PURROBJS): CFLAGS += $(WARN)
 encrypt.o: CFLAGS += $(INC)
 
-purr: $(OBJS.$@) $(LIBSOBJS)
-gemi: $(OBJS.$@) $(LIBSOBJS)
-tests: $(OBJS.$@) $(LIBSOBJS)
-
-$(BASEENCODEOBJS): extern/libbaseencode/common.h extern/libbaseencode/baseencode.h
+$(FINAL): $(OBJS.$@) $(LIBSOBJS)
 
 install: $(FINAL)
 	install -Dm755 purr $(bindir)
@@ -45,4 +43,4 @@ install: $(FINAL)
 	install -m755 gemi $(bindir)
 
 clean:
-	rm -f $(FINAL) $(OBJS) $(LIBS) $(LIBSOBJS)
+	rm -f $(FINAL) $(OBJS) $(LIBSOBJS)
