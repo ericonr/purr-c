@@ -60,8 +60,12 @@ int main(int argc, char **argv)
     char *progpath = argv[0];
     // 32 is an arbitrary number assumed to be big enough for arguments
     char *new_argv[32] = {progpath, NULL};
-    // needs to leave the last two positions for the new arg and a NULL pointer
-    for (int i = 1; i < 32 - 2 && i < optind; i++) {
+    // needs to leave the last 4 positions for:
+    // - "-r" flag
+    // - # of redirects
+    // - new argument
+    // - NULL pointer
+    for (int i = 1; i < 32 - 4 && i < optind; i++) {
         new_argv[i] = argv[i];
     }
     // zero out the redirection counter

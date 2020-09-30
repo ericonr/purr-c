@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #include "purr.h"
 
@@ -36,11 +37,6 @@ char *print_hex(const uint8_t *buf, int len, bool print)
     return rv;
 }
 
-static bool is_hex_char(char c)
-{
-    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
-}
-
 // from https://lemire.me/blog/2019/04/17/parsing-short-hexadecimal-strings-efficiently/
 static uint32_t convert_hex_char(uint8_t c) {
     return (c & 0xF) + 9 * (c >> 6);
@@ -62,7 +58,7 @@ int decode_hex(const char *s, uint8_t *output, int len)
         int j = i * 2;
         int k = j + 1;
 
-        if (is_hex_char(s[j]) && is_hex_char(s[k])) {
+        if (isxdigit(s[j]) && isxdigit(s[k])) {
             output[i] = assemble_u8(s + j);
         } else {
             return -1;

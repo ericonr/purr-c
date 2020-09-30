@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <ctype.h>
 
 #include "gemini.h"
 
@@ -14,11 +15,6 @@ static struct gemini_link_node *gimme_node(void)
 {
     struct gemini_link_node *node = calloc(1, sizeof *node);
     return node;
-}
-
-static bool is_whitespace(char c)
-{
-    return c == ' ' || c == '\t';
 }
 
 static bool is_terminator(char c)
@@ -62,19 +58,19 @@ int get_links_from_gmi(const char *text, struct gemini_link_node **nodes)
             // eat =>
             text += 2;
 
-            while (is_whitespace(*text) && !is_terminator(*text)) {
+            while (isblank(*text) && !is_terminator(*text)) {
                 // eat whitespace
                 text++;
             }
             int i;
             for (i = 0;
-                 !is_whitespace(text[i]) && !is_terminator(text[i]) && i < MAX_LINK_LEN;
+                 !isblank(text[i]) && !is_terminator(text[i]) && i < MAX_LINK_LEN;
                  i++) {
                 tail->path[i] = text[i];
             }
             text += i;
 
-            while (is_whitespace(*text) && !is_terminator(*text)) {
+            while (isblank(*text) && !is_terminator(*text)) {
                 // eat whitespace
                 text++;
             }
