@@ -1,4 +1,4 @@
-#define _XOPEN_SOURCE /* getopt */
+#define _POSIX_C_SOURCE 200112L /* getopt */
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>

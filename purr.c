@@ -1,4 +1,4 @@
-#define _XOPEN_SOURCE /* getopt */
+#define _POSIX_C_SOURCE 200112L /* getopt */
 
 #ifdef HAVE_PROG_INVOCATION
 #define _GNU_SOURCE /* program_invocation_short_name */

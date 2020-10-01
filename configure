@@ -31,7 +31,7 @@ elif [ "$HAVE_GETRANDOM" ]; then
 fi
 
 $CC $ARGS <<EOF 2>/dev/null
-#define _GNU_SOURCE
+#define _GNU_SOURCE /* program_invocation_short_name */
 #include <errno.h>
 int main() {
 	const char *p = program_invocation_short_name;
