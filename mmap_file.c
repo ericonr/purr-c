@@ -54,6 +54,9 @@ struct mmap_file create_mmap_from_FILE(FILE *stream, const char *mode)
         return rv;
     }
 
+    // remove buffering
+    setbuf(stream, NULL);
+
     rv.stream = stream;
     rv.use_stream = true;
     // make data pointer valid, for error checking
@@ -116,7 +119,6 @@ int read_from_mmap(struct mmap_file *file, uint8_t *buffer, int n)
     assert(file->prot & PROT_READ);
 
     if (file->use_stream) {
-        // TODO: returns bogus values, transmissions end up empty
         return fread(buffer, 1, n, file->stream);
     }
 

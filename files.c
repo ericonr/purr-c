@@ -185,7 +185,7 @@ size_t mmap_to_ssl(struct transmission_information ti)
         if (ti.ssl) {
             err = br_sslio_write_all(ti.ioc, tmp, wlen);
         } else {
-            fwrite(tmp, 1, wlen, ti.socket_write_stream);
+            err = (int)fwrite(tmp, 1, wlen, ti.socket_write_stream) != wlen;
         }
         if (err == 0) {
             rv += wlen;

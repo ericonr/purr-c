@@ -188,17 +188,26 @@ int main (int argc, char **argv)
         }
         url = argv[1];
     } else if (send) {
-        if (argc == 2 && strcmp(argv[1], "-")) {
-            input = create_mmap_from_file(argv[1], PROT_READ);
-            if (ERROR_MMAP(input)) {
-                perror("couln't open input file");
-                exit(EXIT_FAILURE);
-            }
-        } else if (argc > 2) {
+        bool using_stdin = false;
+        if (argc > 2) {
             usage(true);
+        } else if (argc == 2 && strcmp(argv[1], "-")) {
+            input = create_mmap_from_file(argv[1], PROT_READ);
         } else {
-            fputs("stdin not supported for ~now~ meow!\n", stderr);
+            // it is necessary to read from stdin instead of streaming a file,
+            // because the HTTP header includes a Content-Length field,
+            // which needs to be populated.
+            input = create_mmap_from_file(NULL, PROT_MEM);
+            using_stdin = true;
+        }
+
+        if (ERROR_MMAP(input)) {
+            perror("create_mmap_from_file()");
             exit(EXIT_FAILURE);
+        }
+
+        if (using_stdin) {
+            input.size = fread(input.data, 1, OUTPUT_FILE_SIZE, stdin);
         }
 
         if (url_opt) {
