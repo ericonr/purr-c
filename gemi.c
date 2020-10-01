@@ -8,6 +8,7 @@
 #include "mmap_file.h"
 #include "read_certs.h"
 #include "gemini.h"
+#include "pager.h"
 
 #define GEMINI_REQUEST 1024
 
@@ -18,6 +19,7 @@ static void usage(bool fail)
         "Usage: gemi [options] <url>\n"
         "Options:\n"
         "    -b: browse mode (experimental)\n"
+        "    -p: use pager: value of PAGER (default is less)\n"
         "    -n: don't strip header\n"
         "    -d: debug\n"
         "    -h: show this dialog\n"
@@ -30,14 +32,18 @@ static void usage(bool fail)
 int main(int argc, char **argv)
 {
     int rv = EXIT_FAILURE;
-    bool debug = false, no_strip = false, browse = false;
+    bool browse = false, pager = false;
+    bool debug = false, no_strip = false;
     int redirections = 0, redirections_pos = 0;
 
     int c;
-    while ((c = getopt(argc, argv, "+bndhr:")) != -1) {
+    while ((c = getopt(argc, argv, "+bpndhr:")) != -1) {
         switch (c) {
             case 'b':
                 browse = true;
+                break;
+            case 'p':
+                pager = true;
                 break;
             case 'n':
                 no_strip = true;
@@ -123,12 +129,20 @@ int main(int argc, char **argv)
 
     signal(SIGPIPE, SIG_IGN);
 
-    // writes directly into stdout
+    FILE *output_stream = stdout;
+    struct pager_proc pager_info;
+    if (pager) {
+        if (launch_pager(&pager_info) < 0) {
+            return rv;
+        }
+        output_stream = pager_info.file;
+    }
+
     struct mmap_file output;
     if (browse) {
         output = create_mmap_from_file(NULL, PROT_MEM);
     } else {
-        output = create_mmap_from_FILE(stdout, "w");
+        output = create_mmap_from_FILE(output_stream, "w");
     }
     if (ERROR_MMAP(output)) {
         return rv;
@@ -150,6 +164,16 @@ int main(int argc, char **argv)
     if (rv == EXIT_FAILURE) {
         goto early_out;
     }
+
+    // generic way of outputting data:
+    // - if using FILE backend, offset is 0 and nothing happens
+    // - if using memory backend, offset is used
+    // data output should happen _before_ dealing with links
+    fwrite(output.data, 1, output.offset, output_stream);
+    // pager must always be closed before exec'ing into self
+    // if redirect_link exists, should also kill pager
+    // XXX: add some flag to not kill pager when performing redirection?
+    if (pager) wait_for_pager(pager_info, (bool)redirect_link);
 
     if (redirect_link) {
         redirections += 1;
@@ -182,10 +206,6 @@ int main(int argc, char **argv)
         execvp(progpath, new_argv);
     }
 
-    // generic way of outputting data:
-    // - if using FILE backend, offset is 0 and nothing happens
-    // - if using memory backend, offset is used
-    fwrite(output.data, 1, output.offset, stdout);
     if (browse) {
         struct gemini_link_node *head = NULL;
         int n = get_links_from_gmi((char *)output.data, &head);

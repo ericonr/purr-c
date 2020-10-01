@@ -12,7 +12,7 @@ INC += -Iextern
 
 BASEENCODEOBJS = extern/libbaseencode/base64.o extern/libbaseencode/base32.o
 PURROBJS = socket.o urls.o files.o comm.o formats.o encrypt.o mmap_file.o
-PURROBJS += read_certs.o gemini.o
+PURROBJS += read_certs.o gemini.o pager.o
 LIBSOBJS = $(BASEENCODEOBJS) $(PURROBJS)
 
 HEADERS = purr.h mmap_file.h read_certs.h gemini.h
