@@ -1,16 +1,35 @@
+#define _POSIX_C_SOURCE 200112L /* fdopen */
 #include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
 
 #include "purr.h"
 
 int send_and_receive(struct connection_information *ci)
 {
+    int rv = 0;
+
+    int socket_write = dup(ci->socket);
+    if (socket_write < 0) {
+        perror("dup()");
+        return rv;
+    }
+
     struct transmission_information ti =
         {.ioc = ci->ioc,
          .no_strip = ci->no_strip, .debug = ci->debug,
          .socket = ci->socket,
+         .socket_write_stream = fdopen(socket_write, "w"),
          .ssl = ci->ssl,
          .type = ci->type,
          .header_callback = ci->header_callback};
+
+    if (ti.socket_write_stream == NULL) {
+        perror("fdopen()");
+        return rv;
+    }
+    // remove buffering from the socket stream
+    setbuf(ti.socket_write_stream, NULL);
 
     ti.file = ci->input;
 
@@ -25,12 +44,7 @@ int send_and_receive(struct connection_information *ci)
         }
         br_sslio_write_all(ci->ioc, ci->request, ci->request_size);
     } else {
-        while (ci->request_size) {
-            int wlen;
-            wlen = socket_write(&ci->socket, (uint8_t *)ci->request, ci->request_size);
-            if (wlen > 0) ci->request_size -= wlen;
-            // TODO: doesn't treat sending errors
-        }
+        fwrite(ci->request, 1, ci->request_size, ti.socket_write_stream);
     }
 
     if (ci->send) {
@@ -50,7 +64,6 @@ int send_and_receive(struct connection_information *ci)
         fputs("warning: empty response...\n", stderr);
     }
 
-    int rv = 0;
     if (ti.ssl) {
         // situation around close_notify is fuzzy:
         // relevant RFCs say it is required, but lots of server impls
@@ -87,6 +100,8 @@ int send_and_receive(struct connection_information *ci)
             rv = EXIT_SUCCESS;
         }
     }
+
+    fclose(ti.socket_write_stream);
 
     return rv;
 }

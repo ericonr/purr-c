@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <assert.h>
 #include <errno.h>
+#include <stdio.h>
 
 #include "purr.h"
 #include "mmap_file.h"
@@ -184,14 +185,7 @@ size_t mmap_to_ssl(struct transmission_information ti)
         if (ti.ssl) {
             err = br_sslio_write_all(ti.ioc, tmp, wlen);
         } else {
-            ssize_t wlen_local = wlen;
-            while (wlen_local) {
-                ssize_t written =
-                    socket_write(&ti.socket, tmp + (wlen - wlen_local), wlen_local);
-                if (written > 0) wlen_local -= written;
-                // TODO: add error checking
-                err = 0;
-            }
+            fwrite(tmp, 1, wlen, ti.socket_write_stream);
         }
         if (err == 0) {
             rv += wlen;

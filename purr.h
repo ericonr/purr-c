@@ -53,6 +53,7 @@ struct transmission_information {
     br_sslio_context *ioc;
     struct mmap_file *file;
     int socket;
+    FILE *socket_write_stream;
     bool no_strip, debug, ssl;
     enum connection_type type;
     header_callback_def header_callback;
