@@ -122,3 +122,46 @@ void store_gemini_redirect_link(int s, char *l)
         *(strchr(redirect_link, '\r')) = 0;
     }
 }
+
+/*
+ * This function joins two paths and resolves the "." ".." and "//" refs in them.
+ *
+ * It returns a pointer to a newly allocated string or NULL if allocation failed.
+ */
+char *walk_gemini_path(const char *path, const char *append)
+{
+    size_t path_len = strlen(path), app_len = strlen(append);
+    char *rv = calloc(1, path_len + app_len + 1);
+    if (rv == NULL) {
+        return NULL;
+    }
+    memcpy(rv, path, path_len);
+
+    // Implementation partially by Quentin Rameau,
+    // taken from https://www.openwall.com/lists/musl/2016/11/03/5/1
+    {
+        char *absolute = rv;
+        char *a = rv;
+        const char *r = append;
+
+        /* slash terminate absolute if needed */
+        a = absolute + path_len - 1;
+        if (*a != '/') *(++a) = '/';
+
+        /* resolve . and .. */
+        for (; *r; ++r) {
+            if (*r == '.') {
+                if (r[1] == '/' || !r[1]) continue;
+                if (r[1] == '.' && (r[2] == '/' || !r[2])) {
+                    while (a > absolute && *--a != '/');
+                    continue;
+                }
+            } else if (*r == '/' && *a == '/') continue;
+            *++a = *r;
+        }
+        /* terminate absolute */
+        *++a = 0;
+    }
+
+    return rv;
+}

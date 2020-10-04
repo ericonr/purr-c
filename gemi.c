@@ -216,6 +216,7 @@ int main(int argc, char **argv)
                 int in;
                 int err = scanf("%d", &in);
                 char *new_arg;
+                bool new_arg_alloc = false;
                 if (err == EOF) {
                     // exit cleanly on EOF
                     rv = EXIT_SUCCESS;
@@ -242,8 +243,8 @@ int main(int argc, char **argv)
                         print_gemini_nodes(head, stderr);
                         continue;
                     } else if (pick == 'i') {
-                        // XXX: doesn't leak, because the application will necessarily exit
                         new_arg = calloc(1, 1024);
+                        new_arg_alloc = true;
                         if (new_arg == NULL) {
                             perror("calloc()");
                             goto early_out;
@@ -265,24 +266,29 @@ int main(int argc, char **argv)
                 int new_portn = get_port_from_link(new_arg);
                 if (new_portn == NO_INFO_PORT) {
                     // link is not absolute path
-                    // TODO: path resolution
-                    // TODO: better error msgs
-                    // TODO: treat error codes from server -> bad links (lacking trailing /, for example),
-                    // can probably be solved locally with a smarter client
-                    // Perhaps make header parsing a virtual function kind of thing?
-                    char *new_url = calloc(1, strlen(url) + strlen(new_arg) + 1);
+                    char *clean_path = walk_gemini_path(path, new_arg);
+                    if (clean_path == NULL) {
+                        perror("walk_gemini_path()");
+                        goto early_out;
+                    }
+
+                    char *new_url =
+                        calloc(1, strlen(scheme) + strlen(domain) + strlen(clean_path) + 1);
                     if (new_url == NULL) {
                         perror("calloc()");
                         goto early_out;
                     }
-                    sprintf(new_url, "%s%s%s%s", scheme, domain, path, new_arg);
+                    sprintf(new_url, "%s%s%s", scheme, domain, clean_path);
                     new_argv[new_arg_pos] = new_url;
                 } else if (new_portn != GEMINI_PORT) {
                     fputs("Unsupported protocol!\n", stderr);
-                    goto early_out;
+                    goto link_error;
                 }
 
                 execvp(progpath, new_argv);
+              link_error:
+                if (new_arg_alloc) free(new_arg);
+                continue;
             }
         }
     }

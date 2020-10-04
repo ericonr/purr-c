@@ -151,6 +151,23 @@ int main()
         rv = compare_strings("three", head->next->path, "get_links_from_gmi") ? 1 : rv;
         rv = compare_strings("Three", head->next->name, "get_links_from_gmi") ? 1 : rv;
         assert(n == 2);
+
+        const char *root = "/hello";
+        const char *add = "piper";
+        char *path = walk_gemini_path(root, add);
+        rv = compare_strings("/hello/piper", path, "walk_gemini_path") ? 1 : rv;
+        root = "/hello/";
+        add = "/piper/hi/../../a";
+        path = walk_gemini_path(root, add);
+        rv = compare_strings("/hello/a", path, "walk_gemini_path") ? 1 : rv;
+        root = "/hello/";
+        add = "/piper/hi/";
+        path = walk_gemini_path(root, add);
+        rv = compare_strings("/hello/piper/hi/", path, "walk_gemini_path") ? 1 : rv;
+        root = "/hello";
+        add = "../../../../..";
+        path = walk_gemini_path(root, add);
+        rv = compare_strings("/", path, "walk_gemini_path") ? 1 : rv;
     }
 
     return rv;

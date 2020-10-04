@@ -72,12 +72,11 @@ Use) system.
 
 It has a built-in "navigation" mechanism via the `-b` command line flag, which
 parses the received page, finds links, asks the user to select one, and execs
-into itself with the new link. This method of operation is currently quite
-limited, due to lacking path normalization functions that deal with more complex
-links (such as `../../docs`).
+into itself with the new link.
 
-It now supports parsing server messages, including redirects. However, these
-mechanisms are currently quite verbose.
+It supports parsing server messages, including redirects, and can deal with
+complex links, such as `../../docs`. Due to requiring a complete certificate
+trust chain, it has yet to be submitted to the browser torture test.
 
 #### Usage
 
