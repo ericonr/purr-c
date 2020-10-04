@@ -50,6 +50,12 @@ int main()
         const char *expected = "1202124ca8";
         const char *result = print_hex(buf, sizeof buf, false);
         rv = compare_strings(expected, result, "print_hex") ? 1 : rv;
+        const char *hex = "0403124574";
+        uint8_t buf_expected[] = {0x04, 0x03, 0x12, 0x45, 0x74};
+        uint8_t buf_result[sizeof buf_expected];
+        int err = decode_hex(hex, buf_result, sizeof buf_result);
+        rv = compare_arrays(buf_expected, buf_result, sizeof buf_result, "decode_hex") ? 1 : rv;
+        assert(err == 0);
     }
 
     {

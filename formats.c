@@ -5,7 +5,8 @@
 #include "purr.h"
 
 /*
- * Set print to true to print value, otherwise returns dynamic string with the number
+ * Set print to true to print value to stdout,
+ * otherwise returns dynamically allocated string with the number
  */
 char *print_hex(const uint8_t *buf, int len, bool print)
 {
@@ -52,6 +53,11 @@ static uint8_t assemble_u8(const char *cs)
     return rv;
 }
 
+/*
+ * Decode string containing hexadecimal numbers as printed by print_hex().
+ * len should be half the length of the input string, since it's the final length
+ * of the output array.
+ */
 int decode_hex(const char *s, uint8_t *output, int len)
 {
     for (int i = 0; i < len; i++) {

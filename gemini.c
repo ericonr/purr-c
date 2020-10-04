@@ -11,13 +11,7 @@
 
 char *redirect_link = NULL;
 
-static struct gemini_link_node *gimme_node(void)
-{
-    struct gemini_link_node *node = calloc(1, sizeof *node);
-    return node;
-}
-
-static bool is_terminator(char c)
+static bool is_terminator(int c)
 {
     return c == '\n' || c == '\r' || c == 0;
 }
