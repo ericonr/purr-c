@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <signal.h>
+#include <spawn.h>
 #include <sys/wait.h>
 
 #include "pager.h"
@@ -10,8 +11,8 @@
 int launch_pager(struct pager_proc *p)
 {
     int rv = -1;
-    int pipes[2];
 
+    int pipes[2];
     if (pipe(pipes) < 0) {
         perror("pipe()");
         return rv;
@@ -26,30 +27,46 @@ int launch_pager(struct pager_proc *p)
     // only overwrite LESS if it doesn't exist.
     // set less to exit if output fits in terminal.
     setenv("LESS", "-F", 0);
-    p->pid = fork();
-    if (p->pid < 0) {
-        perror("fork()");
-        // protect against accidental usage of the PID
-        p->pid = 0;
-        return rv;
+
+    posix_spawnattr_t spawn;
+    if (posix_spawnattr_init(&spawn) < 0) {
+        perror("posix_spawnattr_init()");
+        goto err_out;
     }
 
-    if (p->pid == 0) {
-        close(pipes[1]);
-        dup2(pipes[0], STDIN_FILENO);
-        execvp(pager, pager_cmd);
-        // error out if exec fails
-        perror("execvp()");
-        exit(127);
-    } else {
-        close(pipes[0]);
-        p->file = fdopen(pipes[1], "w");
-        if (p->file == NULL) {
-            perror("fdopen()");
-            return rv;
-        }
-        rv = 0;
+    posix_spawn_file_actions_t actions;
+    if (posix_spawn_file_actions_init(&actions) < 0) {
+        perror("posix_spawn_file_actions_init()");
+        goto spawn_out;
     }
+    if (posix_spawn_file_actions_adddup2(&actions, pipes[0], STDIN_FILENO) < 0
+        || posix_spawn_file_actions_addclose(&actions, pipes[1]) < 0) {
+        perror("posix_spawn_file_actions_add*()");
+        goto actions_out;
+    }
+
+    extern char **environ;
+    pid_t pid;
+    if (posix_spawnp(&pid, pager, &actions, &spawn, pager_cmd, environ) != 0) {
+        perror("posix_spawnp()");
+        goto actions_out;
+    }
+
+    p->file = fdopen(pipes[1], "w");
+    if (p->file == NULL) {
+        perror("fdopen()");
+        goto actions_out;
+    }
+    p->pid = pid;
+    rv = 0;
+
+  actions_out:
+    posix_spawn_file_actions_destroy(&actions);
+  spawn_out:
+    posix_spawnattr_destroy(&spawn);
+  err_out:
+    close(pipes[0]);
+    if (rv) close(pipes[1]);
 
     return rv;
 }
