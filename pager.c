@@ -23,19 +23,24 @@ int launch_pager(struct pager_proc *p)
     }
     char *const pager_cmd[] = {pager, NULL};
 
+    // only overwrite LESS if it doesn't exist.
+    // set less to exit if output fits in terminal.
+    setenv("LESS", "-F", 0);
     p->pid = fork();
     if (p->pid < 0) {
         perror("fork()");
+        // protect against accidental usage of the PID
+        p->pid = 0;
         return rv;
     }
 
     if (p->pid == 0) {
         close(pipes[1]);
         dup2(pipes[0], STDIN_FILENO);
-        if (execvp(pager, pager_cmd) < 0) {
-            perror("execvp()");
-            return rv;
-        }
+        execvp(pager, pager_cmd);
+        // error out if exec fails
+        perror("execvp()");
+        exit(127);
     } else {
         close(pipes[0]);
         p->file = fdopen(pipes[1], "w");
