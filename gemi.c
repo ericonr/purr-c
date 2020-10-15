@@ -15,7 +15,8 @@
 __attribute__ ((noreturn))
 static void usage(bool fail)
 {
-    printf(
+    FILE *stream = fail ? stderr : stdout;
+    fprintf(stream,
         "Usage: gemi [options] <url>\n"
         "Options:\n"
         "    -b: browse mode (experimental)\n"
@@ -24,7 +25,9 @@ static void usage(bool fail)
         "    -d: debug\n"
         "    -h: show this dialog\n"
         "    -r: number of redirections (internal use)\n"
+        "Environment:\n"
     );
+    bearssl_read_certs_help(stream);
 
     exit(fail? EXIT_FAILURE : EXIT_SUCCESS);
 }

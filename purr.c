@@ -43,7 +43,8 @@ static void usage(bool fail)
            "    action: s[end] | r[ecv]\n";
     }
 
-    printf(
+    FILE *stream = fail ? stderr : stdout;
+    fprintf(stream,
         "%s"
         "Options:\n"
         "    -a <algo>: choose algorithm, none available\n"
@@ -54,10 +55,10 @@ static void usage(bool fail)
         "    -e: encrypt content: limited to 128KiB files\n"
         "    -d: debug\n"
         "    -h: show this dialog\n"
-        "Environment:\n"
-        "    CA_CERT_SSL_FILE: certificates file, default is /etc/ssl/certs.pem\n",
+        "Environment:\n",
         proghelp
     );
+    bearssl_read_certs_help(stream);
 
     exit(fail? EXIT_FAILURE : EXIT_SUCCESS);
 }

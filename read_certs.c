@@ -16,6 +16,13 @@ struct create_tas {
     size_t n, size;
 };
 
+void bearssl_read_certs_help(FILE *stream)
+{
+    fprintf(stream,
+        "    CA_CERT_SSL_FILE: certificates file, default is /etc/ssl/certs.pem\n"
+    );
+}
+
 void bearssl_free_certs(br_x509_trust_anchor **tasp, size_t n)
 {
     br_x509_trust_anchor *tas = *tasp;
