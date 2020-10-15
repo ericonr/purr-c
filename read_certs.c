@@ -108,9 +108,12 @@ static void push_x509(void *dest_ctx, const void *src, size_t len)
     br_x509_decoder_push(dest, src, len);
 }
 
-size_t bearssl_read_certs(br_x509_trust_anchor **final_ta)
+/*
+ * Reads certs from file if set, otherwise from default location.
+ */
+size_t bearssl_read_certs(br_x509_trust_anchor **final_ta, const char *file)
 {
-    char *cert_path = getenv("CA_CERT_SSL_FILE");
+    const char *cert_path = file ? file : getenv("CA_CERT_SSL_FILE");
     if (cert_path == NULL) {
         cert_path = "/etc/ssl/certs.pem";
     }

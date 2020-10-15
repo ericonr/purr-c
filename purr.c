@@ -316,7 +316,7 @@ int main (int argc, char **argv)
             fputs("reading certs...\n", stderr);
         }
 
-        num_ta = bearssl_read_certs(&btas);
+        num_ta = bearssl_read_certs(&btas, NULL);
         if (num_ta == 0) {
             fputs("couldn't open certs\n", stderr);
             goto early_out;

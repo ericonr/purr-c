@@ -120,7 +120,7 @@ int main(int argc, char **argv)
     uint8_t iobuf[BR_SSL_BUFSIZE_BIDI];
     br_sslio_context ioc;
     br_x509_trust_anchor *btas;
-    size_t num_ta = bearssl_read_certs(&btas);
+    size_t num_ta = bearssl_read_certs(&btas, NULL);
     if (num_ta == 0) {
         fputs("bearssl_read_certs(): couldn't read certs!\n", stderr);
         goto early_out;
