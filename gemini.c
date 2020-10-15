@@ -9,8 +9,6 @@
 #define MAX_NUM_LINKS 1024
 #define MAX_LINK_LEN 1024
 
-char *redirect_link = NULL;
-
 static bool is_terminator(int c)
 {
     return c == '\n' || c == '\r' || c == 0;
@@ -112,6 +110,8 @@ struct gemini_link_node *get_gemini_node_by_n(struct gemini_link_node *head, int
     return rv;
 }
 
+static char *redirect_link = NULL;
+
 void store_gemini_redirect_link(int s, char *l)
 {
     // only store URL if it is a redirect.
@@ -121,6 +121,11 @@ void store_gemini_redirect_link(int s, char *l)
         redirect_link = l;
         *(strchr(redirect_link, '\r')) = 0;
     }
+}
+
+const char *get_gemini_redirect_link(void)
+{
+    return redirect_link;
 }
 
 /*
