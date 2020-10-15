@@ -55,3 +55,31 @@ if [ "$HAVE_GETPROGNAME" ]; then
 elif [ "$HAVE_PROG_INVOCATION" ]; then
 	echo "DEFS += -DHAVE_PROG_INVOCATION" >> config.mk
 fi
+
+$CC $ARGS <<EOF 2>/dev/null
+#include <sys/types.h>
+#include <sys/socket.h>
+int main() {
+	int flag = SOCK_CLOEXEC;
+}
+EOF
+[ $? -eq 0 ] && HAVE_SOCK_CLOEXEC=yes
+
+echo "HAVE_SOCK_CLOEXEC:$HAVE_SOCK_CLOEXEC"
+if [ "$HAVE_SOCK_CLOEXEC" ]; then
+	echo "DEFS += -DHAVE_SOCK_CLOEXEC_H" >> config.mk
+fi
+
+$CC $ARGS <<EOF 2>/dev/null
+#define _GNU_SOURCE /* pipe2 */
+#include <unistd.h>
+int main() {
+	int (*p)(int [2], int) = pipe2;
+}
+EOF
+[ $? -eq 0 ] && HAVE_PIPE2=yes
+
+echo "HAVE_PIPE2:$HAVE_PIPE2"
+if [ "$HAVE_PIPE2" ]; then
+	echo "DEFS += -DHAVE_PIPE2" >> config.mk
+fi

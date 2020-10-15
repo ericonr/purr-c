@@ -3,6 +3,10 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+#ifndef HAVE_SOCK_CLOEXEC_H
+#include <fcntl.h>
+#endif /* HAVE_SOCK_CLOEXEC_H */
+
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -12,6 +16,13 @@
 
 #define MAX_DOMAIN_LEN 254
 #define MAX_SHORTY_LEN 16
+
+/* enable atomic close-on-exec for socket */
+#ifdef HAVE_SOCK_CLOEXEC_H
+#define SOCKET_FLAG SOCK_CLOEXEC
+#else
+#define SOCKET_FLAG 0
+#endif /* HAVE_SOCK_CLOEXEC_H */
 
 static const char *http_sch = "http://";
 static const char *https_sch = "https://";
@@ -203,11 +214,15 @@ int host_connect(const char *host, const char *port, bool debug)
         if (debug) fprintf(stderr, "IP addr: %s\n", ip_addr);
 
         // try to establish connection
-        fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+        fd = socket(p->ai_family, p->ai_socktype | SOCKET_FLAG, p->ai_protocol);
         if (fd < 0) {
             perror("socket()");
             continue;
         }
+        #ifndef HAVE_SOCK_CLOEXEC_H
+        fcntl(fd, F_SETFD, FD_CLOEXEC);
+        #endif /* HAVE_SOCK_CLOEXEC_H */
+
         if (connect(fd, p->ai_addr, p->ai_addrlen) < 0) {
             perror("connect()");
             close(fd);

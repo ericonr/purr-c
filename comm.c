@@ -19,13 +19,16 @@ int send_and_receive(struct connection_information *ci)
         {.ioc = ci->ioc,
          .no_strip = ci->no_strip, .debug = ci->debug,
          .socket = ci->socket,
-         .socket_write_stream = fdopen(socket_write, "w"),
+         // stream is created here and applies close-on-exec to fd.
+         // slightly racy, unfortunately.
+         .socket_write_stream = fdopen(socket_write, "we"),
          .ssl = ci->ssl,
          .type = ci->type,
          .header_callback = ci->header_callback};
 
     if (ti.socket_write_stream == NULL) {
         perror("fdopen()");
+        close(socket_write);
         return rv;
     }
     // remove buffering from the socket stream

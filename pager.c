@@ -1,10 +1,15 @@
 #define _POSIX_C_SOURCE 200112L /* fdopen */
+#ifdef HAVE_PIPE2
+#define _GNU_SOURCE /* pipe2 */
+#endif /* HAVE_PIPE2 */
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <signal.h>
 #include <spawn.h>
 #include <sys/wait.h>
+#include <fcntl.h> /* O_CLOEXEC or fcntl */
 
 #include "pager.h"
 
@@ -13,10 +18,23 @@ int launch_pager(struct pager_proc *p)
     int rv = -1;
 
     int pipes[2];
+
+    // using close-on-exec here is safe, because fds created by dup don't
+    // inherit flags
+    #ifdef HAVE_PIPE2
+    // atomic application of close-on-exec
+    if (pipe2(pipes, O_CLOEXEC) < 0) {
+        perror("pipe2()");
+    }
+    #else
+    // delayed application of close-on-exec
     if (pipe(pipes) < 0) {
         perror("pipe()");
         return rv;
     }
+    fcntl(pipes[0], F_SETFD, FD_CLOEXEC);
+    fcntl(pipes[1], F_SETFD, FD_CLOEXEC);
+    #endif /* HAVE_PIPE2 */
 
     char *pager = getenv("PAGER");
     if (pager == NULL || *pager == 0) {
@@ -52,7 +70,9 @@ int launch_pager(struct pager_proc *p)
         goto actions_out;
     }
 
-    p->file = fdopen(pipes[1], "w");
+    // applying close-on-exec to fd here shouldn't change anything, but it's
+    // also cheap, so there's no reason not to do it.
+    p->file = fdopen(pipes[1], "we");
     if (p->file == NULL) {
         perror("fdopen()");
         goto actions_out;
