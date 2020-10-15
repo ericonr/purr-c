@@ -224,7 +224,8 @@ int host_connect(const char *host, const char *port, bool debug)
         #endif /* HAVE_SOCK_CLOEXEC_H */
 
         if (connect(fd, p->ai_addr, p->ai_addrlen) < 0) {
-            perror("connect()");
+            // connect errors can be caused server-side
+            if (debug) perror("connect()");
             close(fd);
             fd = -1;
             continue;
