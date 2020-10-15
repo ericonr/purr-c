@@ -6,8 +6,8 @@
 
 #include "gemini.h"
 
-#define MAX_NUM_LINKS 1024
-#define MAX_LINK_LEN 1024
+// reasonable UI limit
+#define MAX_NUM_LINKS 100
 
 static bool is_terminator(int c)
 {
@@ -56,7 +56,7 @@ int get_links_from_gmi(const char *text, struct gemini_link_node **nodes)
             }
             int i;
             for (i = 0;
-                 !isblank(text[i]) && !is_terminator(text[i]) && i < MAX_LINK_LEN;
+                 !isblank(text[i]) && !is_terminator(text[i]) && i < GEMINI_LINK_SIZE;
                  i++) {
                 tail->path[i] = text[i];
             }
@@ -67,7 +67,7 @@ int get_links_from_gmi(const char *text, struct gemini_link_node **nodes)
                 text++;
             }
             for (i = 0;
-                 !is_terminator(text[i]) && i < MAX_LINK_LEN;
+                 !is_terminator(text[i]) && i < GEMINI_NAME_SIZE;
                  i++) {
                 tail->name[i] = text[i];
             }

@@ -3,11 +3,13 @@
 
 #include <stdio.h>
 
+#define GEMINI_LINK_SIZE 1024
+#define GEMINI_NAME_SIZE 1024
+
 struct gemini_link_node {
-    char path[1024];
-    char name[1024];
-    int position;
     struct gemini_link_node *next;
+    char path[GEMINI_LINK_SIZE];
+    char name[GEMINI_NAME_SIZE];
 };
 
 /* gemini.c */
