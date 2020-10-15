@@ -21,6 +21,7 @@ static void usage(bool fail)
         "Options:\n"
         "    -b: browse mode (experimental)\n"
         "    -p: use pager: value of PAGER (default is less)\n"
+        "    -s: don't check server name\n"
         "    -n: don't strip header\n"
         "    -d: debug\n"
         "    -h: show this dialog\n"
@@ -35,18 +36,21 @@ static void usage(bool fail)
 int main(int argc, char **argv)
 {
     int rv = EXIT_FAILURE;
-    bool browse = false, pager = false;
+    bool browse = false, pager = false, check_name = true;
     bool debug = false, no_strip = false;
     int redirections = 0, redirections_pos = 0;
 
     int c;
-    while ((c = getopt(argc, argv, "+bpndhr:")) != -1) {
+    while ((c = getopt(argc, argv, "+bpsndhr:")) != -1) {
         switch (c) {
             case 'b':
                 browse = true;
                 break;
             case 'p':
                 pager = true;
+                break;
+            case 's':
+                check_name = false;
                 break;
             case 'n':
                 no_strip = true;
@@ -127,7 +131,7 @@ int main(int argc, char **argv)
     }
     br_ssl_client_init_full(&sc, &xc, btas, num_ta);
     br_ssl_engine_set_buffer(&sc.eng, iobuf, sizeof iobuf, 1);
-    br_ssl_client_reset(&sc, domain, 0);
+    br_ssl_client_reset(&sc, check_name ? domain : NULL, 0);
     br_sslio_init(&ioc, &sc.eng, socket_read, &socket, socket_write, &socket);
 
     signal(SIGPIPE, SIG_IGN);
