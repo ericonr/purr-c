@@ -1,7 +1,7 @@
 #!/bin/sh
 
 : "${CC:=cc}"
-ARGS="-x c -o /dev/null -"
+ARGS="${CFLAGS} ${LDFLAGS} -x c -o /dev/null -"
 
 printf "" > config.mk
 

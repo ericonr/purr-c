@@ -39,7 +39,7 @@ $(FINAL): $(OBJS.$@) $(LIBSOBJS)
 install: $(FINAL)
 	install -Dm755 purr $(bindir)
 	ln -sf purr $(bindir)/meow
-	ln -sf purr $(bindir)meowd
+	ln -sf purr $(bindir)/meowd
 	install -m755 gemi $(bindir)
 
 clean:
