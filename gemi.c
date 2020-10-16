@@ -1,10 +1,10 @@
 #define _POSIX_C_SOURCE 200809L /* getopt, scandir */
-#define _GNU_SOURCE /* asprintf */
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <limits.h>
 
 #include "purr.h"
 #include "mmap_file.h"
@@ -138,10 +138,11 @@ int main(int argc, char **argv)
 
     const char *home = getenv("HOME");
     const char *config = ".config/gemi";
-    char *config_tmp = NULL;
+    const int path_max = PATH_MAX;
+    char config_tmp[PATH_MAX];
     if (home) {
-        if (asprintf(&config_tmp, "%s/%s", home, config) < 0) {
-            perror("asprintf()");
+        if (snprintf(config_tmp, path_max, "%s/%s", home, config) >= path_max) {
+            fputs("path is too long!\n", stderr);
             goto early_out;
         }
         config = config_tmp;
@@ -155,17 +156,15 @@ int main(int argc, char **argv)
         }
     }
     for (int i = 0; i < filenum; i++) {
-        char *filename_tmp = NULL;
-        if (asprintf(&filename_tmp, "%s/%s", config, files[i]->d_name) < 0) {
+        char filename_tmp[PATH_MAX];
+        if (snprintf(filename_tmp, path_max, "%s/%s", config, files[i]->d_name) >= path_max) {
             continue;
         }
         if (bearssl_read_certs(&btas, filename_tmp) == 0) {
             if (debug) fprintf(stderr, "error reading cert file '%s'\n", filename_tmp);
         }
-        free(filename_tmp);
         free(files[i]);
     }
-    if (config_tmp == config) free(config_tmp);
     free(files);
 
     br_ssl_client_init_full(&sc, &xc, btas.ta, btas.n);
