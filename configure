@@ -83,3 +83,20 @@ echo "HAVE_PIPE2:$HAVE_PIPE2"
 if [ "$HAVE_PIPE2" ]; then
 	echo "DEFS += -DHAVE_PIPE2" >> config.mk
 fi
+
+# XXX: not in use, here as future proof
+$CC $ARGS <<EOF 2>/dev/null
+#define _GNU_SOURCE /* scandirat */
+#include <dirent.h>
+int main() {
+int (*p)(int, const char *, struct dirent ***,
+         int (*filter)(const struct dirent *),
+         int (*compar)(const struct dirent **, const struct dirent **)) = scandirat;
+}
+EOF
+[ $? -eq 0 ] && HAVE_SCANDIRAT=yes
+
+echo "HAVE_SCANDIRAT:$HAVE_SCANDIRAT"
+if [ "$HAVE_SCANDIRAT" ]; then
+	echo "DEFS += -DHAVE_SCANDIRAT" >> config.mk
+fi
