@@ -111,7 +111,7 @@ int main(int argc, char **argv)
     }
 
     const int going_to_write = GEMINI_REQUEST;
-    char *request = calloc(going_to_write, 1);
+    char request[GEMINI_REQUEST];
     int written = snprintf(request, going_to_write, "%s%s%s\r\n", scheme, domain, path);
     if (written >= going_to_write) {
         fputs("truncated request!\n", stderr);

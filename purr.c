@@ -257,12 +257,7 @@ int main (int argc, char **argv)
 
     // TODO: fix size
     const int going_to_write = HEADER_MAX_LEN;
-    char *request = calloc(going_to_write, 1);
-    if (request == NULL) {
-        perror("allocation failure");
-        rv = EXIT_FAILURE;
-        goto early_out;
-    }
+    char request[HEADER_MAX_LEN];
 
     // assemble request
     // based on https://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html
@@ -399,7 +394,6 @@ int main (int argc, char **argv)
     free(link);
     free(path);
     free(port);
-    free(request);
     free(key);
     free(iv);
   early_out:
