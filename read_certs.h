@@ -5,8 +5,13 @@
 
 #include <bearssl.h>
 
+struct trust_anchors {
+    br_x509_trust_anchor *ta;
+    size_t n, size;
+};
+
 void bearssl_read_certs_help(FILE *);
-void bearssl_free_certs(br_x509_trust_anchor **, size_t);
-size_t bearssl_read_certs(br_x509_trust_anchor **, const char *);
+void bearssl_free_certs(struct trust_anchors);
+size_t bearssl_read_certs(struct trust_anchors *, const char *);
 
 #endif // __READ_CERTS_H_

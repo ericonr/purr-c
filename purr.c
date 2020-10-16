@@ -297,13 +297,11 @@ int main (int argc, char **argv)
         fputs("-----------------------------\n", stderr);
     }
 
-    size_t num_ta = 0;
-    br_x509_trust_anchor *btas = NULL;
-
     br_ssl_client_context sc;
     br_x509_minimal_context xc;
     uint8_t iobuf[BR_SSL_BUFSIZE_BIDI];
     br_sslio_context ioc;
+    struct trust_anchors btas = { 0 };
 
     int socket;
     if (portn == HTTPS_PORT) {
@@ -311,12 +309,11 @@ int main (int argc, char **argv)
             fputs("reading certs...\n", stderr);
         }
 
-        num_ta = bearssl_read_certs(&btas, NULL);
-        if (num_ta == 0) {
+        if (bearssl_read_certs(&btas, NULL) == 0) {
             fputs("couldn't open certs\n", stderr);
             goto early_out;
         }
-        br_ssl_client_init_full(&sc, &xc, btas, num_ta);
+        br_ssl_client_init_full(&sc, &xc, btas.ta, btas.n);
         br_ssl_engine_set_buffer(&sc.eng, iobuf, sizeof iobuf, 1);
         br_ssl_client_reset(&sc, link, 0);
 
@@ -345,7 +342,7 @@ int main (int argc, char **argv)
     rv = send_and_receive(&ci);
     // clean-up
     close(socket);
-    bearssl_free_certs(&btas, num_ta);
+    bearssl_free_certs(btas);
 
     if (send && encrypt) {
         // backend can't distinguish between a normal and an encrypted paste,

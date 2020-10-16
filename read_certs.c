@@ -11,11 +11,6 @@ struct append_dn_status {
     size_t n, size;
 };
 
-struct create_tas {
-    br_x509_trust_anchor *ta;
-    size_t n, size;
-};
-
 void bearssl_read_certs_help(FILE *stream)
 {
     fprintf(stream,
@@ -23,11 +18,10 @@ void bearssl_read_certs_help(FILE *stream)
     );
 }
 
-void bearssl_free_certs(br_x509_trust_anchor **tasp, size_t n)
+void bearssl_free_certs(struct trust_anchors tas)
 {
-    br_x509_trust_anchor *tas = *tasp;
-    for (size_t i = 0; i < n; i++) {
-        br_x509_trust_anchor ta = tas[i];
+    for (size_t i = 0; i < tas.n; i++) {
+        br_x509_trust_anchor ta = tas.ta[i];
         free(ta.dn.data);
         if (ta.pkey.key_type == BR_KEYTYPE_RSA) {
             free(ta.pkey.key.rsa.n);
@@ -37,11 +31,10 @@ void bearssl_free_certs(br_x509_trust_anchor **tasp, size_t n)
         }
     }
 
-    free(tas);
-    *tasp = NULL;
+    free(tas.ta);
 }
 
-static int append_ta(struct create_tas *ct, br_x509_trust_anchor ta)
+static int append_ta(struct trust_anchors *ct, br_x509_trust_anchor ta)
 {
     if (ct->n + 1 > ct->size) {
         if (ct->size) {
@@ -111,7 +104,7 @@ static void push_x509(void *dest_ctx, const void *src, size_t len)
 /*
  * Reads certs from file if set, otherwise from default location.
  */
-size_t bearssl_read_certs(br_x509_trust_anchor **final_ta, const char *file)
+size_t bearssl_read_certs(struct trust_anchors *tas, const char *file)
 {
     const char *cert_path = file ? file : getenv("CA_CERT_SSL_FILE");
     if (cert_path == NULL) {
@@ -133,7 +126,6 @@ size_t bearssl_read_certs(br_x509_trust_anchor **final_ta, const char *file)
     br_pem_decoder_setdest(&pem, push_x509, &x509);
 
     struct append_dn_status dn_status;
-    struct create_tas new_ta = { 0 };
 
     while (len > 0) {
         size_t pushed = br_pem_decoder_push(&pem, data, len);
@@ -212,7 +204,7 @@ size_t bearssl_read_certs(br_x509_trust_anchor **final_ta, const char *file)
                     }
 
                     ta.pkey = new_key;
-                    if (append_ta(&new_ta, ta) == -1) {
+                    if (append_ta(tas, ta) == -1) {
                         return 0;
                     }
                 }
@@ -220,6 +212,5 @@ size_t bearssl_read_certs(br_x509_trust_anchor **final_ta, const char *file)
         }
     }
 
-    *final_ta = new_ta.ta;
-    return new_ta.n;
+    return tas->n;
 }
