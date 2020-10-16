@@ -1,4 +1,4 @@
-#define _POSIX_C_SOURCE 200809L /* getopt, scandir, openat */
+#define _POSIX_C_SOURCE 200809L /* getopt, openat, fdopendir */
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -36,11 +36,6 @@ static void usage(bool fail)
     bearssl_read_certs_help(stream);
 
     exit(fail? EXIT_FAILURE : EXIT_SUCCESS);
-}
-
-int dirfilter(const struct dirent *dir)
-{
-    return strcmp(dir->d_name, ".") && strcmp(dir->d_name, "..");
 }
 
 int main(int argc, char **argv)
@@ -139,58 +134,72 @@ int main(int argc, char **argv)
         goto early_out;
     }
 
+    // read certificates in config directory
     const char *home = getenv("HOME");
     if (home) {
         char config[PATH_MAX];
         if (snprintf(config, PATH_MAX, "%s/%s", home, ".config/gemi") >= PATH_MAX) {
             fputs("HOME is too long!\n", stderr);
-            goto stop_search;
+            goto stop_config;
         }
-        int config_fd = open(config, O_DIRECTORY | O_PATH | O_CLOEXEC);
+        // can't use O_PATH here, since it's an invalid fd for fdopendir, even duplicated.
+        // XXX: find optimal order of open() and opendir() calls
+        int config_fd = open(config, O_DIRECTORY | O_CLOEXEC);
         if (config_fd < 0) {
             perror("open()");
+            goto stop_config;
+        }
+
+        int config_fd_tmp = dup(config_fd);
+        if (config_fd_tmp < 0) {
+            perror("dup()");
+            goto stop_search;
+        }
+        // POSIX doesn't specify whether fdopendir sets close-on-exec
+        fcntl(config_fd_tmp, F_SETFD, FD_CLOEXEC);
+        DIR *config_dir = fdopendir(config_fd_tmp);
+        if (config_dir == NULL) {
+            perror("fdopendir()");
+            close(config_fd_tmp);
             goto stop_search;
         }
 
-        struct dirent **files = NULL;
-        // XXX: ideally, should use scandirat(2), but that's currently glibc only
-        int filenum = scandir(config, &files, dirfilter, alphasort);
-        if (filenum < 0) {
-            if (debug) {
-                perror("scandir()");
-                fprintf(stderr, "error reading configuration directory '%s'\n", config);
+        struct dirent *config_file;
+        while ((config_file = readdir(config_dir))) {
+            const char *name = config_file->d_name;
+            if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0) {
+                continue;
             }
-            goto stop_search;
-        }
-        for (int i = 0; i < filenum; i++) {
-            int file = openat(config_fd, files[i]->d_name, O_RDONLY | O_CLOEXEC);
-            if (file < 0) {
+
+            int new_file = openat(config_fd, name, O_RDONLY | O_CLOEXEC);
+            if (new_file < 0) {
                 perror("openat()");
-                goto loop_end;
+                continue;
             }
 
             struct stat st;
-            fstat(file, &st);
+            fstat(new_file, &st);
             if ((st.st_mode & S_IFMT) == S_IFREG) {
-                FILE *file_stream = fdopen(file, "re");
+                FILE *file_stream = fdopen(new_file, "re");
                 if (file_stream == NULL) {
-                    close(file);
-                    goto loop_end;
+                    close(new_file);
+                    continue;
                 }
 
                 if (bearssl_read_certs(&btas, file_stream) == 0) {
-                    if (debug) fprintf(stderr, "error reading cert file: '%s'\n", files[i]->d_name);
+                    if (debug) fprintf(stderr, "error reading cert file: '%s'\n", name);
                 }
             } else {
-                close(file);
+                close(new_file);
             }
 
-          loop_end:
-            free(files[i]);
         }
-        free(files);
+
+        closedir(config_dir);
+      stop_search:
+        close(config_fd);
     }
-  stop_search:
+  stop_config:
 
     br_ssl_client_init_full(&sc, &xc, btas.ta, btas.n);
     br_ssl_engine_set_buffer(&sc.eng, iobuf, sizeof iobuf, 1);
