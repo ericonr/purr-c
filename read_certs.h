@@ -12,6 +12,6 @@ struct trust_anchors {
 
 void bearssl_read_certs_help(FILE *);
 void bearssl_free_certs(struct trust_anchors);
-size_t bearssl_read_certs(struct trust_anchors *, const char *);
+size_t bearssl_read_certs(struct trust_anchors *, FILE *);
 
 #endif // __READ_CERTS_H_

@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include "read_certs.h"
-#include "mmap_file.h"
 
 struct append_dn_status {
     uint8_t *dn;
@@ -104,21 +103,22 @@ static void push_x509(void *dest_ctx, const void *src, size_t len)
 /*
  * Reads certs from file if set, otherwise from default location.
  */
-size_t bearssl_read_certs(struct trust_anchors *tas, const char *file)
+size_t bearssl_read_certs(struct trust_anchors *tas, FILE *file)
 {
-    const char *cert_path = file ? file : getenv("CA_CERT_SSL_FILE");
-    if (cert_path == NULL) {
-        cert_path = "/etc/ssl/certs.pem";
-    }
+    size_t rv = 0;
 
-    struct mmap_file cert_map = create_mmap_from_file(cert_path, PROT_READ);
-    if (ERROR_MMAP(cert_map)) {
-        perror("create_mmap_from_file()");
-        return 0;
-    }
+    if (file == NULL) {
+        const char *cert_path = getenv("CA_CERT_SSL_FILE");
+        if (cert_path == NULL) {
+            cert_path = "/etc/ssl/certs.pem";
+        }
 
-    off_t len = cert_map.size;
-    uint8_t *data = cert_map.data;
+        file = fopen(cert_path, "re");
+        if (file == NULL) {
+            perror("fopen()");
+            return rv;
+        }
+    }
 
     br_pem_decoder_context pem;
     br_x509_decoder_context x509;
@@ -127,10 +127,20 @@ size_t bearssl_read_certs(struct trust_anchors *tas, const char *file)
 
     struct append_dn_status dn_status;
 
-    while (len > 0) {
-        size_t pushed = br_pem_decoder_push(&pem, data, len);
-        data += pushed;
+    uint8_t data[512];
+    uint8_t *datap;
+    size_t len = 0;
+    while (1) {
+        if (len == 0) {
+            len = fread(data, 1, 512, file);
+            if (len == 0) {
+                break;
+            }
+            datap = data;
+        }
+        size_t pushed = br_pem_decoder_push(&pem, datap, len);
         len -= pushed;
+        datap += pushed;
 
         switch(br_pem_decoder_event(&pem)) {
             const char *name;
@@ -179,7 +189,7 @@ size_t bearssl_read_certs(struct trust_anchors *tas, const char *file)
                              .e = malloc(k.elen), .elen = k.elen};
                         if (rsa.n == NULL || rsa.e == NULL) {
                             perror("malloc()");
-                            return 0;
+                            goto out;
                         }
                         memcpy(rsa.n, k.n, k.nlen);
                         memcpy(rsa.e, k.e, k.elen);
@@ -193,7 +203,7 @@ size_t bearssl_read_certs(struct trust_anchors *tas, const char *file)
                              .q = malloc(k.qlen), .qlen = k.qlen};
                         if (ec.q == NULL) {
                             perror("malloc()");
-                            return 0;
+                            goto out;
                         }
                         memcpy(ec.q, k.q, k.qlen);
 
@@ -205,12 +215,15 @@ size_t bearssl_read_certs(struct trust_anchors *tas, const char *file)
 
                     ta.pkey = new_key;
                     if (append_ta(tas, ta) == -1) {
-                        return 0;
+                        goto out;
                     }
                 }
                 break;
         }
     }
 
-    return tas->n;
+    rv = tas->n;
+  out:
+    fclose(file);
+    return rv;
 }

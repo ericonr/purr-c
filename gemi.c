@@ -1,10 +1,13 @@
-#define _POSIX_C_SOURCE 200809L /* getopt, scandir */
+#define _POSIX_C_SOURCE 200809L /* getopt, scandir, openat */
 #include <stdio.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <limits.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "purr.h"
 #include "mmap_file.h"
@@ -137,35 +140,57 @@ int main(int argc, char **argv)
     }
 
     const char *home = getenv("HOME");
-    const char *config = ".config/gemi";
-    const int path_max = PATH_MAX;
-    char config_tmp[PATH_MAX];
     if (home) {
-        if (snprintf(config_tmp, path_max, "%s/%s", home, config) >= path_max) {
-            fputs("path is too long!\n", stderr);
-            goto early_out;
+        char config[PATH_MAX];
+        if (snprintf(config, PATH_MAX, "%s/%s", home, ".config/gemi") >= PATH_MAX) {
+            fputs("HOME is too long!\n", stderr);
+            goto stop_search;
         }
-        config = config_tmp;
+        int config_fd = open(config, O_DIRECTORY | O_PATH | O_CLOEXEC);
+        if (config_fd < 0) {
+            perror("open()");
+            goto stop_search;
+        }
+
+        struct dirent **files = NULL;
+        // XXX: ideally, should use scandirat(2), but that's currently glibc only
+        int filenum = scandir(config, &files, dirfilter, alphasort);
+        if (filenum < 0) {
+            if (debug) {
+                perror("scandir()");
+                fprintf(stderr, "error reading configuration directory '%s'\n", config);
+            }
+            goto stop_search;
+        }
+        for (int i = 0; i < filenum; i++) {
+            int file = openat(config_fd, files[i]->d_name, O_RDONLY | O_CLOEXEC);
+            if (file < 0) {
+                perror("openat()");
+                goto loop_end;
+            }
+
+            struct stat st;
+            fstat(file, &st);
+            if ((st.st_mode & S_IFMT) == S_IFREG) {
+                FILE *file_stream = fdopen(file, "re");
+                if (file_stream == NULL) {
+                    close(file);
+                    goto loop_end;
+                }
+
+                if (bearssl_read_certs(&btas, file_stream) == 0) {
+                    if (debug) fprintf(stderr, "error reading cert file: '%s'\n", files[i]->d_name);
+                }
+            } else {
+                close(file);
+            }
+
+          loop_end:
+            free(files[i]);
+        }
+        free(files);
     }
-    struct dirent **files = NULL;
-    int filenum = scandir(config, &files, dirfilter, alphasort);
-    if (filenum < 0) {
-        if (debug) {
-            perror("scandir()");
-            fprintf(stderr, "error reading configuration directory '%s'\n", config);
-        }
-    }
-    for (int i = 0; i < filenum; i++) {
-        char filename_tmp[PATH_MAX];
-        if (snprintf(filename_tmp, path_max, "%s/%s", config, files[i]->d_name) >= path_max) {
-            continue;
-        }
-        if (bearssl_read_certs(&btas, filename_tmp) == 0) {
-            if (debug) fprintf(stderr, "error reading cert file '%s'\n", filename_tmp);
-        }
-        free(files[i]);
-    }
-    free(files);
+  stop_search:
 
     br_ssl_client_init_full(&sc, &xc, btas.ta, btas.n);
     br_ssl_engine_set_buffer(&sc.eng, iobuf, sizeof iobuf, 1);
