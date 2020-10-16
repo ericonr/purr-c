@@ -29,10 +29,13 @@ HTTP_CONN = 0,
 GEMINI_CONN
 };
 
-// callback for passing header information:
-// int - status
-// char * - relevant part of header
-typedef void (*header_callback_def)(int, char *);
+/*
+ * Callback for storing header information
+ * Args:
+ *   int status
+ *   const char *information_to_be_copied
+ */
+typedef void (*header_callback_def)(int, const char *);
 
 struct connection_information {
     br_sslio_context *ioc;

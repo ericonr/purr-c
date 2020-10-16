@@ -180,7 +180,7 @@ int main(int argc, char **argv)
     // pager must always be closed before exec'ing into self
     // if redirect_link exists, should also kill pager
     // XXX: add some flag to not kill pager when performing redirection?
-    const char *redirect_link = get_gemini_redirect_link();
+    char *redirect_link = get_gemini_redirect_link();
     if (pager) wait_for_pager(pager_info, (bool)redirect_link);
 
     if (redirect_link) {
@@ -306,5 +306,6 @@ int main(int argc, char **argv)
     free(domain);
     free(path);
     free(port);
+    free_gemini_redirect_link();
     return rv;
 }

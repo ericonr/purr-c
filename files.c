@@ -1,4 +1,3 @@
-#define _XOPEN_SOURCE 500 /* strdup */
 #include <stdlib.h>
 #include <unistd.h>
 #include <assert.h>
@@ -125,7 +124,7 @@ size_t ssl_to_mmap(struct transmission_information ti)
                 meta++;
 
                 if (ti.header_callback) {
-                    ti.header_callback(first, strdup(meta));
+                    ti.header_callback(first, meta);
                 }
 
                 switch (first) {

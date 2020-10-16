@@ -1,3 +1,4 @@
+#define _XOPEN_SOURCE 500 /* strdup */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -112,20 +113,28 @@ struct gemini_link_node *get_gemini_node_by_n(struct gemini_link_node *head, int
 
 static char *redirect_link = NULL;
 
-void store_gemini_redirect_link(int s, char *l)
+void store_gemini_redirect_link(int s, const char *l)
 {
     // only store URL if it is a redirect.
     // this comes from a header, so will always end with \r\n
     // cut \r
     if (s == '3') {
-        redirect_link = l;
-        *(strchr(redirect_link, '\r')) = 0;
+        redirect_link = strdup(l);
+        // if allocation fails, redirection simply won't be detected
+        if (redirect_link) {
+            *(strchr(redirect_link, '\r')) = 0;
+        }
     }
 }
 
-const char *get_gemini_redirect_link(void)
+char *get_gemini_redirect_link(void)
 {
     return redirect_link;
+}
+
+void free_gemini_redirect_link(void)
+{
+    free(redirect_link);
 }
 
 /*
