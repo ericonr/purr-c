@@ -1,8 +1,10 @@
-#define _POSIX_C_SOURCE 200112L /* getopt */
+#define _POSIX_C_SOURCE 200809L /* getopt, scandir */
+#define _GNU_SOURCE /* asprintf */
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
+#include <dirent.h>
 
 #include "purr.h"
 #include "mmap_file.h"
@@ -31,6 +33,11 @@ static void usage(bool fail)
     bearssl_read_certs_help(stream);
 
     exit(fail? EXIT_FAILURE : EXIT_SUCCESS);
+}
+
+int dirfilter(const struct dirent *dir)
+{
+    return strcmp(dir->d_name, ".") && strcmp(dir->d_name, "..");
 }
 
 int main(int argc, char **argv)
@@ -123,13 +130,45 @@ int main(int argc, char **argv)
     br_x509_minimal_context xc;
     uint8_t iobuf[BR_SSL_BUFSIZE_BIDI];
     br_sslio_context ioc;
-    br_x509_trust_anchor *btas;
-    size_t num_ta = bearssl_read_certs(&btas, NULL);
-    if (num_ta == 0) {
+    struct trust_anchors btas = { 0 };
+    if (bearssl_read_certs(&btas, NULL) == 0) {
         fputs("bearssl_read_certs(): couldn't read certs!\n", stderr);
         goto early_out;
     }
-    br_ssl_client_init_full(&sc, &xc, btas, num_ta);
+
+    const char *home = getenv("HOME");
+    const char *config = ".config/gemi";
+    char *config_tmp = NULL;
+    if (home) {
+        if (asprintf(&config_tmp, "%s/%s", home, config) < 0) {
+            perror("asprintf()");
+            goto early_out;
+        }
+        config = config_tmp;
+    }
+    struct dirent **files = NULL;
+    int filenum = scandir(config, &files, dirfilter, alphasort);
+    if (filenum < 0) {
+        if (debug) {
+            perror("scandir()");
+            fprintf(stderr, "error reading configuration directory '%s'\n", config);
+        }
+    }
+    for (int i = 0; i < filenum; i++) {
+        char *filename_tmp = NULL;
+        if (asprintf(&filename_tmp, "%s/%s", config, files[i]->d_name) < 0) {
+            continue;
+        }
+        if (bearssl_read_certs(&btas, filename_tmp) == 0) {
+            if (debug) fprintf(stderr, "error reading cert file '%s'\n", filename_tmp);
+        }
+        free(filename_tmp);
+        free(files[i]);
+    }
+    if (config_tmp == config) free(config_tmp);
+    free(files);
+
+    br_ssl_client_init_full(&sc, &xc, btas.ta, btas.n);
     br_ssl_engine_set_buffer(&sc.eng, iobuf, sizeof iobuf, 1);
     br_ssl_client_reset(&sc, check_name ? domain : NULL, 0);
     br_sslio_init(&ioc, &sc.eng, socket_read, &socket, socket_write, &socket);
@@ -165,7 +204,7 @@ int main(int argc, char **argv)
     rv = send_and_receive(&ci);
 
     // free resources
-    bearssl_free_certs(&btas, num_ta);
+    bearssl_free_certs(btas);
     close(socket);
 
     if (rv == EXIT_FAILURE) {
