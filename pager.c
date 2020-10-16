@@ -1,4 +1,4 @@
-#define _POSIX_C_SOURCE 200112L /* fdopen */
+#define _POSIX_C_SOURCE 200112L /* fdopen, nanosleep */
 #ifdef HAVE_PIPE2
 #define _GNU_SOURCE /* pipe2 */
 #endif /* HAVE_PIPE2 */
@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include <spawn.h>
+#include <time.h>
 #include <sys/wait.h>
 #include <fcntl.h> /* O_CLOEXEC or fcntl */
 
@@ -97,7 +98,9 @@ int wait_for_pager(struct pager_proc p, bool should_kill)
     fclose(p.file);
 
     if (should_kill) {
-        sleep(1);
+        // quick interval to make redirection noticeable
+        struct timespec sleep_time = { .tv_nsec = 200L * 1000L * 1000L };
+        nanosleep(&sleep_time, NULL);
         kill(p.pid, SIGTERM);
     }
 
