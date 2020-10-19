@@ -19,12 +19,6 @@
 
 const char *progname;
 
-// value defined in
-// https://www.iana.org/assignments/tls-extensiontype-values/tls-extensiontype-values.xhtml#alpn-protocol-ids
-// used for https://tools.ietf.org/html/rfc7301
-const char *alpn_list[] = { "http/1.0" };
-const size_t alpn_n = 1;
-
 __attribute__ ((noreturn))
 static void usage(bool fail)
 {
@@ -231,6 +225,13 @@ int main (int argc, char **argv)
         goto early_out;
     }
 
+    if (port_opt) {
+        strncpy(port, port_opt, 16);
+    } else if (send && url_opt == NULL) {
+        // purrito by default uses port 42069
+        strcpy(port, "42069");
+    }
+
     // clean up hash property, if present
     char *hash_prop;
     if (!encrypt && (hash_prop = strchr(path, '#'))) {
@@ -255,47 +256,11 @@ int main (int argc, char **argv)
         }
     }
 
-    // TODO: fix size
-    const int going_to_write = HEADER_MAX_LEN;
-    char request[HEADER_MAX_LEN];
-
-    // assemble request
-    // based on https://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html
-    // using HTTP/1.0, to avoid implementation complexity
-    // https://stackoverflow.com/questions/246859/http-1-0-vs-1-1
-    int written = 0;
-    if (recv) {
-        written = snprintf(request, going_to_write,
-                           "GET %s HTTP/1.0\r\n"
-                           "Host: %s\r\n"
-                           "Accept: */*\r\n"
-                           "\r\n",
-                           path, link);
-    } else if (send) {
-        if (port_opt) {
-            strncpy(port, port_opt, 16);
-        } else if (url_opt == NULL) {
-            // purrito by default uses port 42069
-            strcpy(port, "42069");
-        }
-        // use header similar to curl's
-        written = snprintf(request, going_to_write,
-                           "POST %s HTTP/1.0\r\n"
-                           "Host: %s:%s\r\n"
-                           "Accept: */*\r\n"
-                           "Content-Length: %lu\r\n"
-                           "Content-Type: application/x-www-form-urlencoded\r\n"
-                           "\r\n",
-                           path, link, port, input.size);
-    }
-    if (written >= going_to_write) {
-        fputs("warning: truncated request!\n", stderr);
-    }
-    if (debug) {
-        fputs("request header: -------------\n", stderr);
-        fputs(request, stderr);
-        fputs("-----------------------------\n", stderr);
-    }
+    // values defined in
+    // https://www.iana.org/assignments/tls-extensiontype-values/tls-extensiontype-values.xhtml#alpn-protocol-ids
+    // used for https://tools.ietf.org/html/rfc7301
+    const char *alpn_list[2] = { "http/1.1", "http/1.0" };
+    const size_t alpn_n = 2;
 
     br_ssl_client_context sc;
     br_x509_minimal_context xc;
@@ -303,8 +268,9 @@ int main (int argc, char **argv)
     br_sslio_context ioc;
     struct trust_anchors btas = { 0 };
 
+    bool ssl = (portn == HTTPS_PORT);
     int socket;
-    if (portn == HTTPS_PORT) {
+    if (ssl) {
         if (debug) {
             fputs("reading certs...\n", stderr);
         }
@@ -315,6 +281,7 @@ int main (int argc, char **argv)
         }
         br_ssl_client_init_full(&sc, &xc, btas.ta, btas.n);
         br_ssl_engine_set_buffer(&sc.eng, iobuf, sizeof iobuf, 1);
+        br_ssl_engine_set_protocol_names(&sc.eng, alpn_list, alpn_n);
         br_ssl_client_reset(&sc, link, 0);
 
         // this function only takes the pointer to socket, so it's safe
@@ -330,13 +297,77 @@ int main (int argc, char **argv)
     // avoid crashing on socket release
     signal(SIGPIPE, SIG_IGN);
 
+    const char *alpn = NULL;
+    if (ssl) {
+        // flush the io context in order to force it to perform a handshake.
+        // the handshake might include ALPN negotiation.
+        br_sslio_flush(&ioc);
+        alpn = br_ssl_engine_get_selected_protocol(&sc.eng);
+        if (debug) {
+            if (alpn) {
+                fprintf(stderr, "ALPN: %s\n", alpn);
+            } else {
+                fputs("ALPN mismatch\n", stderr);
+            }
+        }
+    }
+
+    // https://stackoverflow.com/questions/246859/http-1-0-vs-1-1
+    // the important fields in use here are common to both
+    // HTTP/1.0: https://tools.ietf.org/html/rfc1945
+    // HTTP/1.1: https://tools.ietf.org/html/rfc2616
+    const char *http_ver;
+    if (alpn == NULL || strcmp(alpn, "http/1.0") == 0) {
+        http_ver = "HTTP/1.0";
+    } else if (strcmp(alpn, "http/1.1") == 0) {
+        http_ver = "HTTP/1.1";
+    } else {
+        fputs("ERROR: execution shouldn't have gotten here!\n", stderr);
+        goto out;
+    }
+
+    const int going_to_write = HEADER_MAX_LEN;
+    char request[HEADER_MAX_LEN];
+    int written = 0;
+    if (recv) {
+        written = snprintf(
+            request, going_to_write,
+            "GET %s %s\r\n"
+            "Host: %s:%s\r\n" // most 1.0 servers require it
+            "Accept: */*\r\n" // some servers can complain if it isn't present
+            "Accept-Encoding: identity\r\n" // avoid compressed content
+            "\r\n",
+            path, http_ver, link, port);
+    } else if (send) {
+        written = snprintf(
+            request, going_to_write,
+            "POST %s %s\r\n"
+            "Host: %s:%s\r\n"
+            "Accept: */*\r\n"
+            "Content-Length: %lu\r\n" // required in most cases and good practice
+            "Content-Type: application/octet-stream\r\n" // can be any file type
+            "\r\n",
+            path, http_ver, link, port, input.size);
+    }
+
+    if (written >= going_to_write) {
+        fputs("error: truncated request!\n", stderr);
+        goto out;
+    }
+    if (debug) {
+        fputs("request header: -------------\n", stderr);
+        fputs(request, stderr);
+        fputs("-----------------------------\n", stderr);
+    }
+
     struct connection_information ci =
         {.ioc = &ioc, .sc = &sc,
-         .alpn_list = alpn_list, .alpn_n = alpn_n,
          .request = request, .request_size = written,
          .input = &input, .output = &output,
          .socket = socket,
-         .send = send, .ssl = (portn == HTTPS_PORT),
+         .send = send, .ssl = ssl,
+         // ALPN verification is performed before send_and_receive()
+         .alpn= false,
          .no_strip = no_strip, .debug = debug};
 
     rv = send_and_receive(&ci);

@@ -37,15 +37,25 @@ int send_and_receive(struct connection_information *ci)
     ti.file = ci->input;
 
     if (ti.ssl) {
-        if (ci->alpn_list) {
-            if (ci->debug) fputs("sending ALPN message\n", stderr);
-            br_ssl_engine_set_protocol_names(&ci->sc->eng, ci->alpn_list, ci->alpn_n);
-            if (br_ssl_engine_get_selected_protocol(&ci->sc->eng) == NULL) {
-                // don't treat as fatal error
-                if (ci->debug) fputs("error setting ALPN type\n", stderr);
+        br_sslio_write_all(ci->ioc, ci->request, ci->request_size);
+
+        if (ci->alpn) {
+            if (ci->request_size == 0) {
+                // force some transmission so handshake is performed and ALPN is negotiated.
+                // this is necessary here because an empty request won't generate a handshake.
+                br_sslio_flush(ci->ioc);
+            }
+
+            const char *alpn_name = br_ssl_engine_get_selected_protocol(&ci->sc->eng);
+            if (ci->debug) {
+                // this isn't critical information
+                if (alpn_name == NULL) {
+                    fputs("ALPN mismatch\n", stderr);
+                } else {
+                    fprintf(stderr, "ALPN: %s\n", alpn_name);
+                }
             }
         }
-        br_sslio_write_all(ci->ioc, ci->request, ci->request_size);
     } else {
         fwrite(ci->request, 1, ci->request_size, ti.socket_write_stream);
     }

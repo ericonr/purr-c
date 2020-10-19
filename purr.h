@@ -41,12 +41,11 @@ struct connection_information {
     br_sslio_context *ioc;
     br_ssl_client_context *sc;
     const char *request;
-    const char **alpn_list;
-    size_t alpn_n;
     size_t request_size;
     struct mmap_file *input, *output;
     int socket;
     bool send, ssl;
+    bool alpn;
     bool no_strip, debug;
     enum connection_type type;
     header_callback_def header_callback;
