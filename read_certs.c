@@ -36,23 +36,15 @@ void bearssl_free_certs(struct trust_anchors tas)
 static int append_ta(struct trust_anchors *ct, br_x509_trust_anchor ta)
 {
     if (ct->n + 1 > ct->size) {
-        if (ct->size) {
-            size_t tmp = ct->size * 2;
-            ct->ta = realloc(ct->ta, tmp * sizeof(ta));
-            if (ct->ta == NULL) {
-                perror("realloc()");
-                return -1;
-            }
-            ct->size = tmp;
-        } else {
-            size_t tmp = 64;
-            ct->ta = malloc(tmp * sizeof(ta));
-            if (ct->ta == NULL) {
-                perror("malloc()");
-                return -1;
-            }
-            ct->size = tmp;
+        size_t tmp = ct->size * 2;
+        if (tmp == 0) tmp = 64;
+
+        ct->ta = realloc(ct->ta, tmp * sizeof(ta));
+        if (ct->ta == NULL) {
+            perror("realloc()");
+            return -1;
         }
+        ct->size = tmp;
     }
 
     ct->ta[ct->n++] = ta;
@@ -64,30 +56,18 @@ static void append_dn(void *ctx, const void *buf, size_t len)
 {
     struct append_dn_status *s = ctx;
     if (s->n + len > s->size) {
-        if (s->size) {
-            size_t tmp = s->size;
-            while (s->n + len > tmp) {
-                tmp *= 2;
-            }
-            s->dn = realloc(s->dn, tmp);
-            if (s->dn == NULL) {
-                perror("realloc()");
-                return;
-            }
-            s->size = tmp;
-        } else {
-            // no memory had been allocated
-            size_t tmp = 256;
-            while (len > tmp) {
-                tmp *= 2;
-            }
-            s->dn = malloc(tmp);
-            if (s->dn == NULL) {
-                perror("malloc()");
-                return;
-            }
-            s->size = tmp;
+        size_t tmp = s->size;
+        if (tmp == 0) tmp = 256;
+
+        while (s->n + len > tmp) {
+            tmp *= 2;
         }
+        s->dn = realloc(s->dn, tmp);
+        if (s->dn == NULL) {
+            perror("realloc()");
+            return;
+        }
+        s->size = tmp;
     }
 
     memcpy(s->dn + s->n, buf, len);
