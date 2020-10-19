@@ -64,19 +64,18 @@ receive encrypted pastes, respectively.
 
 ### gemi
 
-This is a (kind of) dumb [Gemini](https://gemini.circumlunar.space/) client. For
-now, it requires servers with certificates that can be verified by the client's
-trust anchors, which means it isn't fully compliant with the Gemini spec, since
-it requires support for self-signed certificates via the TOFU (Trust On First
-Use) system.
+This is a (not so dumb anymore) [Gemini](https://gemini.circumlunar.space/)
+client. It doesn't support TOFU (Trust On First Use) yet, so it isn't fully
+compliant with the Gemini spec, but it can talk to any server, not being limited
+to those whose certificates can be verified by the local trust anchors.
 
 It has a built-in "navigation" mechanism via the `-b` command line flag, which
 parses the received page, finds links, asks the user to select one, and execs
 into itself with the new link.
 
 It supports parsing server messages, including redirects, and can deal with
-complex links, such as `../../docs`. Due to requiring a complete certificate
-trust chain, it has yet to be submitted to the browser torture test.
+"complex" links, such as `../../docs`. It is now in the process of being
+submitted to the browser torture test.
 
 #### Usage
 

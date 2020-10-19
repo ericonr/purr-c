@@ -27,6 +27,7 @@ static void usage(bool fail)
         "    -b: browse mode (experimental)\n"
         "    -p: use pager: value of PAGER (default is less)\n"
         "    -s: don't check server name\n"
+        "    -a: accept server's public key\n"
         "    -n: don't strip header\n"
         "    -d: debug\n"
         "    -h: show this dialog\n"
@@ -41,12 +42,12 @@ static void usage(bool fail)
 int main(int argc, char **argv)
 {
     int rv = EXIT_FAILURE;
-    bool browse = false, pager = false, check_name = true;
+    bool browse = false, pager = false, check_name = true, accept_pkey = false;
     bool debug = false, no_strip = false;
     int redirections = 0, redirections_pos = 0;
 
     int c;
-    while ((c = getopt(argc, argv, "+bpsndhr:")) != -1) {
+    while ((c = getopt(argc, argv, "+bpsandhr:")) != -1) {
         switch (c) {
             case 'b':
                 browse = true;
@@ -56,6 +57,9 @@ int main(int argc, char **argv)
                 break;
             case 's':
                 check_name = false;
+                break;
+            case 'a':
+                accept_pkey = true;
                 break;
             case 'n':
                 no_strip = true;
@@ -110,11 +114,6 @@ int main(int argc, char **argv)
     // shouldn't need to normalize path output for things such as trailing slash,
     // since redirects should take care of most cases
 
-    int socket = host_connect(domain, port, debug);
-    if (socket < 0) {
-        fputs("host_connect(): couldn't open socket or find domain\n", stderr);
-    }
-
     const int going_to_write = GEMINI_REQUEST;
     char request[GEMINI_REQUEST];
     int written = snprintf(request, going_to_write, "%s%s%s\r\n", scheme, domain, path);
@@ -124,10 +123,6 @@ int main(int argc, char **argv)
     }
     if (debug) fprintf(stderr, "request: %s", request);
 
-    br_ssl_client_context sc;
-    br_x509_minimal_context xc;
-    uint8_t iobuf[BR_SSL_BUFSIZE_BIDI];
-    br_sslio_context ioc;
     struct trust_anchors btas = { 0 };
     if (bearssl_read_certs(&btas, NULL) == 0) {
         fputs("bearssl_read_certs(): couldn't read certs!\n", stderr);
@@ -199,12 +194,25 @@ int main(int argc, char **argv)
       stop_search:
         close(config_fd);
     }
+
+    br_ssl_client_context sc;
+    br_x509_minimal_context xc;
+    uint8_t iobuf[BR_SSL_BUFSIZE_BIDI];
+    br_sslio_context ioc;
+    int socket;
+
+  // label belongs to block above
   stop_config:
 
     br_ssl_client_init_full(&sc, &xc, btas.ta, btas.n);
     br_ssl_engine_set_buffer(&sc.eng, iobuf, sizeof iobuf, 1);
     br_ssl_client_reset(&sc, check_name ? domain : NULL, 0);
     br_sslio_init(&ioc, &sc.eng, socket_read, &socket, socket_write, &socket);
+
+
+    if ((socket = host_connect(domain, port, debug)) < 0) {
+        fputs("host_connect(): couldn't open socket or find domain\n", stderr);
+    }
 
     signal(SIGPIPE, SIG_IGN);
 
@@ -236,13 +244,62 @@ int main(int argc, char **argv)
          .type = GEMINI_CONN, .header_callback = store_gemini_redirect_link};
     rv = send_and_receive(&ci);
 
-    // free resources
-    bearssl_free_certs(btas);
+    // socket can always be closed after connection
     close(socket);
 
     if (rv == EXIT_FAILURE) {
-        goto early_out;
+        // try to get server's public key from x509 context
+        unsigned int usages;
+        const br_x509_pkey *pkey = xc.vtable->get_pkey(&xc.vtable, &usages);
+        if (pkey == NULL) {
+            if (debug) fputs("null public key\n", stderr);
+            goto early_out;
+        } else {
+            if (debug) fprintf(stderr, "keytype: %d\n", pkey->key_type);
+
+            if (!accept_pkey) {
+                fputs("run with -a to use the obtained public key!\n", stderr);
+                goto early_out;
+            }
+            fputs("trying to connect with obtained public key!\n", stderr);
+
+            br_x509_knownkey_context kkc;
+            if (pkey->key_type == BR_KEYTYPE_RSA) {
+                br_x509_knownkey_init_rsa(&kkc, &pkey->key.rsa, usages);
+            } else if (pkey->key_type == BR_KEYTYPE_EC) {
+                br_x509_knownkey_init_ec(&kkc, &pkey->key.ec, usages);
+            } else {
+                fprintf(stderr, "unknown key type: %d\n", pkey->key_type);
+                goto early_out;
+            }
+
+            // create new minimal_context to preserve the pkey from above
+            br_x509_minimal_context nxc;
+
+            // XXX: this could instead be done with the exec-self mechanism and
+            // shared memory shenanigans, but this solution is much simpler
+
+            // fully reset SSL-related structs; use client_init_full for simplicity
+            br_ssl_client_init_full(&sc, &nxc, btas.ta, btas.n);
+            br_ssl_engine_set_buffer(&sc.eng, iobuf, sizeof iobuf, 1);
+            br_ssl_client_reset(&sc, NULL, 0);
+            br_sslio_init(&ioc, &sc.eng, socket_read, &socket, socket_write, &socket);
+
+            // use the knownkey x509 context
+            br_ssl_engine_set_x509(&sc.eng, &kkc.vtable);
+
+            if ((socket = host_connect(domain, port, debug)) < 0) {
+                perror("host_connect()");
+                goto early_out;
+            }
+            if ((rv = send_and_receive(&ci)) == EXIT_FAILURE) {
+                goto early_out;
+            }
+        }
     }
+
+    // free certs now that they won't be used anymore
+    bearssl_free_certs(btas);
 
     // generic way of outputting data:
     // - if using FILE backend, offset is 0 and nothing happens
