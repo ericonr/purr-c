@@ -130,18 +130,19 @@ int main(int argc, char **argv)
     }
 
     // read certificates in config directory
+    // errors here aren't critical
     const char *home = getenv("HOME");
     if (home) {
         char config[PATH_MAX];
         if (snprintf(config, PATH_MAX, "%s/%s", home, ".config/gemi") >= PATH_MAX) {
-            fputs("HOME is too long!\n", stderr);
+            if (debug) fputs("HOME is too long!\n", stderr);
             goto stop_config;
         }
         // can't use O_PATH here, since it's an invalid fd for fdopendir, even duplicated.
         // XXX: find optimal order of open() and opendir() calls
         int config_fd = open(config, O_DIRECTORY | O_CLOEXEC);
         if (config_fd < 0) {
-            perror("open()");
+            if (debug) perror("open()");
             goto stop_config;
         }
 
