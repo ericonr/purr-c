@@ -7,12 +7,6 @@ the programs inside should be treated as such.
 The [BearSSL](https://www.bearssl.org/) library was chosen as the crypto and SSL
 implementation.
 
-[libbaseencode](https://github.com/paolostivanin/libbaseencode) has been
-vendored in (can be found in `external/libbaseencode`), but has also gone
-through some changes, namely removing null-byte checking from the base64
-encoding function, adding an output length parameter to the base64 decoding
-function and fixing Valgrind warnings about out-of-bounds accesses.
-
 The code has a few instances of `// TODO: remove hack` comments and the like,
 which I hope to get to someday.
 
@@ -87,4 +81,4 @@ Usage information can be viewed with `gemi -h`.
 - Laurent Bercot for s6-networking (even though it's no longer in use here)
 - epsilon-0 for PurritoBin (and the valuable help while I was testing this
    program)
-- paolostivanin for libbaseencode
+- paolostivanin for libbaseencode (also no longer used here)

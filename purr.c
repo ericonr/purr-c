@@ -380,7 +380,7 @@ int main (int argc, char **argv)
         free(iv_s);
     } else if (recv && encrypt) {
         output = decrypt_mmap(output, key, iv);
-        fwrite(output.data, 1, output.size, output_print);
+        fwrite(output.data, 1, output.offset, output_print);
     } else if ((off_t)fwrite(output.data, 1, output.offset, output_print) < output.offset) {
         // offset is 0 when use_stream is true, so no double printing is done
         fputs("might not have written all data\n", stderr);

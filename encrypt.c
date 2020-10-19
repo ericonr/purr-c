@@ -26,10 +26,16 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "libbaseencode/baseencode.h"
+#include <bearssl.h>
 
 #include "purr.h"
 #include "mmap_file.h"
+
+#define PEM_HEADER "TOP-SECRET"
+// 5 slashes + "BEGIN " + <header> + 5 slashes + LR
+#define PEM_HEADER_BEGIN_SIZE (sizeof PEM_HEADER - 1 + 5 + sizeof("BEGIN ") - 1 + 5 + 1)
+// LR + 5 slashes + "END " + <header> + 5 slashes
+#define PEM_HEADER_END_SIZE (1 + sizeof PEM_HEADER - 1 + 5 + sizeof("END ") - 1 + 5)
 
 /*
  * This function takes an mmap_file struct, and returns an encrypted mmap_file from it.
@@ -90,21 +96,40 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
     free(iv_throwaway);
 
     #ifdef ENCODE_BASE_64
-    baseencode_error_t berr;
-    char *data = base64_encode(rv.data, rv.size, &berr);
     struct mmap_file rv_64 = {.prot = PROT_MEM, .flags = MAP_MEM};
-    if (data == NULL) {
-        fprintf(stderr, "base64_encode(): error code %d\n", berr);
+
+    // default mode -> PEM object with 76 characters per line
+    size_t encsize = br_pem_encode(NULL, rv.data, rv.size, PEM_HEADER, 0);
+    char *pem_enc = malloc(encsize + 1);
+    if (pem_enc == NULL) {
         return rv_64;
     }
+    br_pem_encode(pem_enc, rv.data, rv.size, PEM_HEADER, 0);
 
-    rv_64.size = strlen(data);
+    int newlines = 0;
+    char *new_line_search = pem_enc;
+    while((new_line_search = strchr(new_line_search, '\n'))) {
+        new_line_search++;
+        newlines++;
+    }
+    if (newlines < 2) {
+        fputs("encoding error!", stderr);
+        return rv_64;
+    } else {
+        newlines -= 2;
+    }
+
+    rv_64.size = encsize - newlines - PEM_HEADER_BEGIN_SIZE - PEM_HEADER_END_SIZE;
     if (!allocate_mmap(&rv_64)) {
         return rv_64;
     }
-    memcpy(rv_64.data, data, rv_64.size);
+    for (int i = 0; i < newlines; i++) {
+        memcpy(rv_64.data + i * 76,
+               pem_enc + PEM_HEADER_BEGIN_SIZE + i * (76 + 1),
+               (i == newlines) ? rv_64.size % 76 : 76);
+    }
 
-    free(data);
+    free(pem_enc);
     free_mmap(&rv);
     rv = rv_64;
     #endif /* ENCODE_BASE_64 */
@@ -118,6 +143,42 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
     return rv;
 }
 
+#ifdef DECODE_BASE_64
+struct b64_decoding_struct {
+    uint8_t *data;
+    size_t n, size;
+    bool dead;
+};
+
+enum b64_decoding_status {
+B64_BEGIN,
+B64_MAIN,
+B64_END
+};
+
+static void push_decoded_b64(void *dest_ctx, const void *src, size_t len)
+{
+    struct b64_decoding_struct *ct = dest_ctx;
+    if (ct->dead) return;
+
+    if (ct->n + len > ct->size) {
+        if (ct->size == 0) ct->size = 64;
+
+        while (ct->n + len > (ct->size *= 2));
+
+        ct->data = realloc(ct->data, ct->size);
+        if (ct->data == NULL) {
+            perror("realloc()");
+            ct->dead = true;
+            return;
+        }
+    }
+
+    memcpy(ct->data + ct->n, src, len);
+    ct->n += len;
+}
+#endif /* DECODE_BASE_64 */
+
 /*
  * This function takes an mmap_file struct, and returns a decrypted buffer from it.
  * Args:
@@ -127,33 +188,90 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
  */
 struct mmap_file decrypt_mmap(struct mmap_file file, const uint8_t *key, const uint8_t *iv)
 {
-    struct mmap_file rv = {.size = file.size, .prot = PROT_MEM, .flags = MAP_MEM};
+    struct mmap_file rv = {.size = file.offset, .prot = PROT_MEM, .flags = MAP_MEM};
 
     #ifdef DECODE_BASE_64
-    baseencode_error_t berr;
-    size_t data_len;
-    // TODO: find out why file.size is weird
-    uint8_t *data = base64_decode((char *)file.data, strlen((char *)file.data), &berr, &data_len);
-    if (data == NULL) {
-        fprintf(stderr, "base64_decode(): error code %d\n", berr);
+    br_pem_decoder_context pem;
+    br_pem_decoder_init(&pem);
+    struct b64_decoding_struct dec = { 0 };
+    br_pem_decoder_setdest(&pem, push_decoded_b64, &dec);
+
+    const char *b64_begin_header = "-----BEGIN TOP-SECRET-----\n";
+    const size_t beginlen_c = strlen(b64_begin_header);
+    size_t beginlen = beginlen_c;
+
+    static const char *b64_end_header = "\n-----END TOP-SECRET-----";
+    const size_t endlen_c = strlen(b64_end_header);
+    size_t endlen = endlen_c;
+
+    size_t wlen = file.offset;
+
+    enum b64_decoding_status dec_step = B64_BEGIN;
+    while (1) {
+        bool should_break = false;
+
+        switch (dec_step) {
+            size_t pushed;
+
+            case B64_BEGIN:
+                pushed = br_pem_decoder_push(
+                    &pem,
+                    b64_begin_header + (beginlen_c - beginlen),
+                    beginlen);
+                beginlen -= pushed;
+                if (beginlen == 0) dec_step = B64_MAIN;
+                break;
+            case B64_MAIN:
+                pushed = br_pem_decoder_push(
+                    &pem,
+                    file.data + (file.offset - wlen),
+                    wlen);
+                wlen -= pushed;
+                if (wlen == 0) dec_step = B64_END;
+                break;
+            case B64_END:
+                pushed = br_pem_decoder_push(
+                    &pem,
+                    b64_end_header + (endlen_c - endlen),
+                    endlen);
+                endlen -= pushed;
+                if (endlen == 0) should_break = true;
+                break;
+        }
+
+        switch (br_pem_decoder_event(&pem)) {
+            case BR_PEM_ERROR:
+                fputs("base64 decoding error!\n", stderr);
+                dec.dead = true;
+                // fall through
+            case BR_PEM_END_OBJ:
+                should_break = true;
+                // fall through
+            case BR_PEM_BEGIN_OBJ:
+            case 0:
+                break;
+        }
+        if (should_break) break;
+    }
+    if (dec.dead) {
         return rv;
     }
-    // big hack to bypass issues
-    //assert(data_len % br_aes_big_BLOCK_SIZE == 0);
-    data_len -= data_len % br_aes_big_BLOCK_SIZE;
-
-    rv.size = data_len;
+    rv.size = dec.n;
     #endif /* DECODE_BASE_64 */
 
+    if (rv.size % br_aes_big_BLOCK_SIZE) {
+        fputs("bad input size!\n", stderr);
+        return rv;
+    }
     if (!allocate_mmap(&rv)) {
         return rv;
     }
 
     #ifdef DECODE_BASE_64
-    memcpy(rv.data, data, rv.size);
-    free(data);
+    write_into_mmap(&rv, dec.data, rv.size);
+    free(dec.data);
     #else
-    memcpy(rv.data, file.data, file.size);
+    write_into_mmap(&rv, file.data, rv.size);
     #endif /* DECODE_BASE_64 */
 
     free_mmap(&file);
@@ -169,7 +287,7 @@ struct mmap_file decrypt_mmap(struct mmap_file file, const uint8_t *key, const u
 
     br_aes_big_cbcdec_keys br = { 0 };
     br_aes_big_cbcdec_init(&br, key, KEY_LEN);
-    br_aes_big_cbcdec_run(&br, iv_throwaway, rv.data, rv.size);
+    br_aes_big_cbcdec_run(&br, iv_throwaway, rv.data, rv.offset);
     free(iv_throwaway);
 
     // remove padding - only knows PKCS7
@@ -178,12 +296,12 @@ struct mmap_file decrypt_mmap(struct mmap_file file, const uint8_t *key, const u
         // data might contain padding
         bool found_padding = true;
         for (int i = 0; i < padding; i++) {
-            if (rv.data[rv.size - 1 - i] != padding) {
+            if (rv.data[rv.offset - 1 - i] != padding) {
                 found_padding = false;
             }
         }
         if (found_padding) {
-            rv.size -= padding;
+            rv.offset -= padding;
         }
     }
 
