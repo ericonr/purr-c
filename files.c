@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #include "purr.h"
 #include "mmap_file.h"
@@ -116,12 +117,13 @@ size_t ssl_to_mmap(struct transmission_information ti)
                 // gemini headers can be checked for information
                 // <STATUS: 2 chars><SPACE><META>
                 char first = st.header[0], second = st.header[1], *meta = st.header + 2;
-                if (first < '1' || first > '6' || second < '0' || second > '9' || *meta != ' ') {
+                if (first < '1' || first > '6' || second < '0' || second > '9' || !isblank(*meta)) {
                     fputs("out-of-spec header!\n", stderr);
                     goto early_out;
                 }
-                // eat the space
-                meta++;
+                // eat all the whitespaces - known to have at least one;
+                // breaks if whitespace isn't the same
+                meta = strrchr(st.header, *meta) + 1;
 
                 if (ti.header_callback) {
                     ti.header_callback(first, meta);
