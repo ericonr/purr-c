@@ -323,7 +323,7 @@ int main (int argc, char **argv)
         http_ver = "HTTP/1.1";
     } else {
         fputs("ERROR: execution shouldn't have gotten here!\n", stderr);
-        goto out;
+        abort();
     }
 
     const int going_to_write = HEADER_MAX_LEN;
