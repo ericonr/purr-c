@@ -1,0 +1,4 @@
+name: 'Launch docker'
+runs:
+   using: 'docker'
+   image: '.github/action/Dockerfile'

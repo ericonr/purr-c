@@ -1,0 +1,10 @@
+name: Run test suite
+on: [push, pull_request]
+jobs:
+   build_and_test:
+      runs-on: ubuntu-latest
+      steps:
+         - name: Checkout
+           uses: actions/checkout@v2
+         - name: Run tests
+           uses: ./.github/actions/
