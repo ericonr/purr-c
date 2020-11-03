@@ -3,5 +3,8 @@ tests
 gemi
 *.o
 *.a
+*.d
+core.*
+vgcore.*
 .gdb_history
 config.mk
