@@ -56,8 +56,8 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
 
     uint8_t *key = calloc(KEY_LEN, 1);
     uint8_t *iv = calloc(IV_LEN, 1);
-    uint8_t *iv_throwaway = calloc(IV_LEN, 1);
-    if (key == NULL || iv == NULL || iv_throwaway == NULL) {
+    uint8_t iv_throwaway[IV_LEN] = { 0 };
+    if (key == NULL || iv == NULL) {
         perror("allocation failure");
         return rv;
     }
@@ -93,7 +93,6 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
     br_aes_big_cbcenc_keys br = { 0 };
     br_aes_big_cbcenc_init(&br, key, KEY_LEN);
     br_aes_big_cbcenc_run(&br, iv_throwaway, rv.data, file_size);
-    free(iv_throwaway);
 
     #ifdef ENCODE_BASE_64
     struct mmap_file rv_64 = {.prot = PROT_MEM, .flags = MAP_MEM};
@@ -276,19 +275,12 @@ struct mmap_file decrypt_mmap(struct mmap_file file, const uint8_t *key, const u
 
     free_mmap(&file);
 
-    uint8_t *iv_throwaway = calloc(IV_LEN, 1);
-    if (iv_throwaway == NULL) {
-        perror("calloc()");
-        // return bad rv so caller knows there was a failure
-        free_mmap(&rv);
-        return rv;
-    }
+    uint8_t iv_throwaway[IV_LEN];
     memcpy(iv_throwaway, iv, IV_LEN);
 
     br_aes_big_cbcdec_keys br = { 0 };
     br_aes_big_cbcdec_init(&br, key, KEY_LEN);
     br_aes_big_cbcdec_run(&br, iv_throwaway, rv.data, rv.offset);
-    free(iv_throwaway);
 
     // remove padding - only knows PKCS7
     int padding = rv.data[rv.size - 1];
