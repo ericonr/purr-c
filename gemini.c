@@ -145,7 +145,8 @@ void free_gemini_redirect_link(void)
 char *walk_gemini_path(const char *path, const char *append)
 {
     size_t path_len = strlen(path), app_len = strlen(append);
-    char *rv = calloc(1, path_len + app_len + 1);
+    // enough to fit both strings + one additional slash + null termination
+    char *rv = calloc(1, path_len + app_len + 1 + 1);
     if (rv == NULL) {
         return NULL;
     }
