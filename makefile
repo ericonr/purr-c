@@ -24,12 +24,15 @@ OBJS = $(foreach var,$(FINAL),$(OBJS.$(var)))
 
 DEPS = $(LIBSOBJS:.o=.d) $(OBJS:.o=.d)
 
-.PHONY: all check install clean
+.PHONY: all check check-net install clean
 
 all: $(FINAL)
 
 check: tests
 	./tests
+
+check-net: tests
+	./test.sh
 
 $(OBJS) $(PURROBJS): config.mk
 $(OBJS) $(PURROBJS): CFLAGS += $(WARN)
