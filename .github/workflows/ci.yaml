@@ -1,10 +1,20 @@
 name: Tests
 on: [push, pull_request]
 jobs:
-   build_and_test:
+   gcc-musl:
       runs-on: ubuntu-latest
+      container: voidlinux/voidlinux-musl
       steps:
          - name: Checkout
-           uses: actions/checkout@v2
-         - name: Run tests
-           uses: ericonr/voidlinux-crypto-gh-action@master
+           uses: actions/checkout@v1
+         - name: Install packages
+           run: xbps-install -Sy gcc make bearssl-devel
+         - name: Build and run tests
+           run: ci/run.sh
+   clang-glibc:
+      runs-on: ubuntu-latest
+      container: voidlinux/voidlinux
+      steps:
+         - uses: actions/checkout@v1
+         - run: xbps-install -Sy clang make bearssl-devel
+         - run: CC=clang ci/run.sh
