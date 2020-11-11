@@ -70,6 +70,7 @@ int get_port_from_link(const char *);
 int clean_up_link(const char *, char **, char **, char **, char **);
 int get_encryption_params(char *, uint8_t **, uint8_t **);
 int host_connect(const char *, const char *, bool);
+void host_connect_error_message(void);
 
 /* files.c */
 size_t ssl_to_mmap(struct transmission_information);

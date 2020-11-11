@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: purr-c\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-11-11 00:08-0300\n"
+"POT-Creation-Date: 2020-11-11 01:28-0300\n"
 "PO-Revision-Date: 2020-11-11 00:08-0300\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: gemi.c:27
+#: gemi.c:26
 msgid ""
 "Usage: gemi [options] <url>\n"
 "Options:\n"
@@ -32,7 +32,7 @@ msgid ""
 "    -r: number of redirections (internal use)\n"
 "Environment:\n"
 msgstr ""
-"Uso: gemi [opções] <url>\n"
+"Forma de uso: gemi [opções] <url>\n"
 "Opçõess:\n"
 "    -b: modo navegador (experimental)\n"
 "    -p: utilizar paginador: valor de PAGER (padrão é o programa less)\n"
@@ -48,9 +48,9 @@ msgstr ""
 msgid "this isn't a gemini url!\n"
 msgstr "isso não é um endereço gemini!\n"
 
-#: gemi.c:127
-msgid "truncated request!\n"
-msgstr "o pedido foi truncado!\n"
+#: gemi.c:127 purr.c:354
+msgid "error: truncated request!\n"
+msgstr "erro: o pedido foi truncado!\n"
 
 #: gemi.c:130
 #, c-format
@@ -69,10 +69,6 @@ msgstr "HOME é longo demais!\n"
 #, c-format
 msgid "error reading cert file: '%s'\n"
 msgstr "erro ao ler o arquivo de certificado: '%s'\n"
-
-#: gemi.c:221
-msgid "host_connect(): couldn't open socket or find domain\n"
-msgstr "host_connect(): não foi possível abrir a socket ou achar o domínio\n"
 
 #: gemi.c:262
 msgid "null public key\n"
@@ -117,7 +113,8 @@ msgstr "Links encontrados: %d\n"
 
 #: gemi.c:359
 msgid "Input link number (starts at 0) or control char ('?' or 'i'): "
-msgstr "Entre o número do link (começa em 0) ou caractere de controle ('?' ou 'i'): "
+msgstr ""
+"Entre o número do link (começa em 0) ou caractere de controle ('?' ou 'i'): "
 
 #: gemi.c:375
 #, c-format
@@ -140,3 +137,138 @@ msgstr "Entrada ruim!\n"
 #: gemi.c:428
 msgid "Unsupported protocol!\n"
 msgstr "Protocolo não suportado!\n"
+
+#: purr.c:29
+msgid ""
+"Usage: meow [options] <file>\n"
+"    send <file> in encrypted format\n"
+msgstr ""
+"Forma de uso: meow [opções] <arquivo>\n"
+"    enviar <arquivo> de forma encriptada\n"
+
+#: purr.c:33
+msgid ""
+"Usage meowd [options] <url>\n"
+"    receive encrypted file from <url>\n"
+msgstr ""
+"Forma de uso: meowd [opções] <url>\n"
+"    receber arquivo encriptado de <url>\n"
+
+#: purr.c:37
+msgid ""
+"Usage: purr [options] <action> <file>|<url>\n"
+"    action: s[end] | r[ecv]\n"
+msgstr ""
+"Forma de uso: purr [opções] <ação> <arquivo>|<url>\n"
+"    acão: s[end] | r[ecv] (enviar ou receber)\n"
+
+#: purr.c:43
+#, c-format
+msgid ""
+"%sOptions:\n"
+"    -a <algo>: choose algorithm, none available\n"
+"    -u <url>: URL to use for send functionality\n"
+"    -p <port>: port to use for send\n"
+"    -o <output_file>: use file instead of stdout\n"
+"    -n: don't strip HTTP header from response\n"
+"    -e: encrypt content: limited to 128KiB files\n"
+"    -d: debug\n"
+"    -h: show this dialog\n"
+"Environment:\n"
+msgstr ""
+"%sOpções:\n"
+"    -a <algo>: escolher algoritmo, nenhum disponível\n"
+"    -u <url>: URL utilizada para envio\n"
+"    -p <porta>: porta utilizada para envio\n"
+"    -o <arquivo_de_saída>: utilize esse arquivo ao invés da saída padrão\n"
+"    -n: não esconder cabeçalho HTTP da resposta\n"
+"    -e: encriptar conteúdo: limitado a aquivos de 128KiB\n"
+"    -d: rodar em modo de debug\n"
+"    -h: mostrar essa mensagem\n"
+"Ambiente:\n"
+
+#: purr.c:155
+msgid "couldn't open output stream"
+msgstr "não foi possível abrir stream de saída"
+
+#: purr.c:171
+msgid "couldn't open output file"
+msgstr "não foi possível abrir arquivo de saída"
+
+#: purr.c:182
+msgid "discarding url arg...\n"
+msgstr "descartando argumento de URL...\n"
+
+#: purr.c:219
+msgid "couldn't parse URL!\n"
+msgstr "não foi possível parsear a URL!\n"
+
+#: purr.c:223
+msgid "only supports HTTP and HTTPS for now!\n"
+msgstr "apenas suporta HTTP e HTTPS por enquanto!\n"
+
+#: purr.c:253
+msgid "error decoding url"
+msgstr "erro ao decodificar a URL"
+
+#: purr.c:275
+msgid "reading certs...\n"
+msgstr "lendo certificados...\n"
+
+#: purr.c:279
+msgid "couldn't open certs\n"
+msgstr "não foi possível abrir certificados\n"
+
+#: purr.c:310
+msgid "ALPN mismatch\n"
+msgstr "desencontro de ALPN\n"
+
+#: purr.c:386
+msgid "couldn't clean up received link"
+msgstr "não foi possível limpar o link recebido"
+
+#. offset is 0 when use_stream is true, so no double printing is done
+#: purr.c:417
+msgid "might not have written all data\n"
+msgstr "pode ser que nem todos os dados tenham sido escritos\n"
+
+#: urls.c:39
+msgid "scheme is too long"
+msgstr "o nome de protocolo é longo demais"
+
+#: urls.c:51 urls.c:92
+msgid "unknown protocol"
+msgstr "protocolo desconhecido"
+
+#: urls.c:127
+msgid "malformed URL"
+msgstr "URL mal formada"
+
+#: urls.c:166 urls.c:173
+msgid "malformed KEY and/or IV input"
+msgstr "entrada de chave ou vetor de inicialização mal formada"
+
+#: urls.c:210
+msgid "unsupported addr result"
+msgstr "resultado de endereço não suportado"
+
+#: urls.c:215
+msgid "IP address"
+msgstr "endereço IP"
+
+#: urls.c:245
+msgid "couldn't open socket or find domain"
+msgstr "não foi possível abrir a socket ou achar o domínio"
+
+#: read_certs.c:18
+msgid "CA_CERT_SSL_FILE: certificates file, default is /etc/ssl/certs.pem"
+msgstr "CA_CERT_SSL_FILE: arquivo de certificados, padrão é /etc/ssl/certs.pem"
+
+#: read_certs.c:146
+#, c-format
+msgid "X509 err code: %d\n"
+msgstr "código de erro X509: %d\n"
+
+#: read_certs.c:195
+msgid "non supported key\n"
+msgstr "chave não suportado\n"

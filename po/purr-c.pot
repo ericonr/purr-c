@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: purr-c\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-11-11 00:06-0300\n"
+"POT-Creation-Date: 2020-11-11 01:28-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: gemi.c:27
+#: gemi.c:26
 msgid ""
 "Usage: gemi [options] <url>\n"
 "Options:\n"
@@ -36,8 +36,8 @@ msgstr ""
 msgid "this isn't a gemini url!\n"
 msgstr ""
 
-#: gemi.c:127
-msgid "truncated request!\n"
+#: gemi.c:127 purr.c:354
+msgid "error: truncated request!\n"
 msgstr ""
 
 #: gemi.c:130
@@ -56,10 +56,6 @@ msgstr ""
 #: gemi.c:192
 #, c-format
 msgid "error reading cert file: '%s'\n"
-msgstr ""
-
-#: gemi.c:221
-msgid "host_connect(): couldn't open socket or find domain\n"
 msgstr ""
 
 #: gemi.c:262
@@ -127,4 +123,123 @@ msgstr ""
 
 #: gemi.c:428
 msgid "Unsupported protocol!\n"
+msgstr ""
+
+#: purr.c:29
+msgid ""
+"Usage: meow [options] <file>\n"
+"    send <file> in encrypted format\n"
+msgstr ""
+
+#: purr.c:33
+msgid ""
+"Usage meowd [options] <url>\n"
+"    receive encrypted file from <url>\n"
+msgstr ""
+
+#: purr.c:37
+msgid ""
+"Usage: purr [options] <action> <file>|<url>\n"
+"    action: s[end] | r[ecv]\n"
+msgstr ""
+
+#: purr.c:43
+#, c-format
+msgid ""
+"%sOptions:\n"
+"    -a <algo>: choose algorithm, none available\n"
+"    -u <url>: URL to use for send functionality\n"
+"    -p <port>: port to use for send\n"
+"    -o <output_file>: use file instead of stdout\n"
+"    -n: don't strip HTTP header from response\n"
+"    -e: encrypt content: limited to 128KiB files\n"
+"    -d: debug\n"
+"    -h: show this dialog\n"
+"Environment:\n"
+msgstr ""
+
+#: purr.c:155
+msgid "couldn't open output stream"
+msgstr ""
+
+#: purr.c:171
+msgid "couldn't open output file"
+msgstr ""
+
+#: purr.c:182
+msgid "discarding url arg...\n"
+msgstr ""
+
+#: purr.c:219
+msgid "couldn't parse URL!\n"
+msgstr ""
+
+#: purr.c:223
+msgid "only supports HTTP and HTTPS for now!\n"
+msgstr ""
+
+#: purr.c:253
+msgid "error decoding url"
+msgstr ""
+
+#: purr.c:275
+msgid "reading certs...\n"
+msgstr ""
+
+#: purr.c:279
+msgid "couldn't open certs\n"
+msgstr ""
+
+#: purr.c:310
+msgid "ALPN mismatch\n"
+msgstr ""
+
+#: purr.c:386
+msgid "couldn't clean up received link"
+msgstr ""
+
+#. offset is 0 when use_stream is true, so no double printing is done
+#: purr.c:417
+msgid "might not have written all data\n"
+msgstr ""
+
+#: urls.c:39
+msgid "scheme is too long"
+msgstr ""
+
+#: urls.c:51 urls.c:92
+msgid "unknown protocol"
+msgstr ""
+
+#: urls.c:127
+msgid "malformed URL"
+msgstr ""
+
+#: urls.c:166 urls.c:173
+msgid "malformed KEY and/or IV input"
+msgstr ""
+
+#: urls.c:210
+msgid "unsupported addr result"
+msgstr ""
+
+#: urls.c:215
+msgid "IP address"
+msgstr ""
+
+#: urls.c:245
+msgid "couldn't open socket or find domain"
+msgstr ""
+
+#: read_certs.c:18
+msgid "CA_CERT_SSL_FILE: certificates file, default is /etc/ssl/certs.pem"
+msgstr ""
+
+#: read_certs.c:146
+#, c-format
+msgid "X509 err code: %d\n"
+msgstr ""
+
+#: read_certs.c:195
+msgid "non supported key\n"
 msgstr ""

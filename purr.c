@@ -16,6 +16,7 @@
 #include "purr.h"
 #include "mmap_file.h"
 #include "read_certs.h"
+#include "translation.h"
 
 const char *progname;
 
@@ -24,22 +25,22 @@ static void usage(bool fail)
 {
     char *proghelp;
     if (strcmp(progname, "meow") == 0) {
-        proghelp =
+        proghelp = _(
             "Usage: meow [options] <file>\n"
-            "    send <file> in encrypted format\n";
+            "    send <file> in encrypted format\n");
     } else if (strcmp(progname, "meowd") == 0) {
-        proghelp =
+        proghelp = _(
             "Usage meowd [options] <url>\n"
-            "    receive encrypted file from <url>\n";
+            "    receive encrypted file from <url>\n");
     } else {
-       proghelp =
+       proghelp = _(
            "Usage: purr [options] <action> <file>|<url>\n"
-           "    action: s[end] | r[ecv]\n";
+           "    action: s[end] | r[ecv]\n");
     }
 
     FILE *stream = fail ? stderr : stdout;
     fprintf(stream,
-        "%s"
+        _("%s"
         "Options:\n"
         "    -a <algo>: choose algorithm, none available\n"
         "    -u <url>: URL to use for send functionality\n"
@@ -49,7 +50,7 @@ static void usage(bool fail)
         "    -e: encrypt content: limited to 128KiB files\n"
         "    -d: debug\n"
         "    -h: show this dialog\n"
-        "Environment:\n",
+        "Environment:\n"),
         proghelp
     );
     bearssl_read_certs_help(stream);
@@ -65,6 +66,10 @@ int main (int argc, char **argv)
     bool no_strip = false, encrypt = false, debug = false;
 
     bool send = false, recv = false;
+
+    setlocale(LC_MESSAGES, "");
+    bindtextdomain(GETTEXT_PACKAGE, GETTEXT_DIR);
+    textdomain(GETTEXT_PACKAGE);
 
     #ifdef HAVE_PROG_INVOCATION
     progname = program_invocation_short_name;
@@ -147,7 +152,7 @@ int main (int argc, char **argv)
     if (output_file && strcmp(output_file, "-")) {
         output_print = fopen(output_file, "we");
         if (output_print == NULL) {
-            perror("couldn't open output stream");
+            perror(_("couldn't open output stream"));
             exit(EXIT_FAILURE);
         }
     }
@@ -163,7 +168,7 @@ int main (int argc, char **argv)
         output = create_mmap_from_FILE(output_print, "w");
     }
     if (ERROR_MMAP(output)) {
-        perror("couldn't open output file");
+        perror(_("couldn't open output file"));
         exit(EXIT_FAILURE);
     }
 
@@ -179,7 +184,7 @@ int main (int argc, char **argv)
         }
 
         if (url_opt) {
-            fputs("discarding url arg...\n", stderr);
+            fputs(_("discarding url arg...\n"), stderr);
         }
         url = argv[1];
     } else if (send) {
@@ -216,11 +221,11 @@ int main (int argc, char **argv)
     char *scheme = NULL, *link = NULL, *path = NULL, *port = NULL;
     int portn = clean_up_link(url, &scheme, &link, &path, &port);
     if (portn == -1) {
-        fputs("couldn't parse URL!\n", stderr);
+        fputs(_("couldn't parse URL!\n"), stderr);
         rv = EXIT_FAILURE;
         goto early_out;
     } else if (portn != HTTPS_PORT && portn != HTTP_PORT) {
-        fputs("only supports HTTP and HTTPS for now!\n", stderr);
+        fputs(_("only supports HTTP and HTTPS for now!\n"), stderr);
         rv = EXIT_FAILURE;
         goto early_out;
     }
@@ -250,7 +255,7 @@ int main (int argc, char **argv)
     } else if (recv && encrypt) {
         int err = get_encryption_params(path, &key, &iv);
         if (err) {
-            fputs("get_encription_params(): error decoding url\n", stderr);
+            fprintf(stderr, "get_encryption_params(): %s\n", _("error decoding url"));
             rv = EXIT_FAILURE;
             goto early_out;
         }
@@ -272,11 +277,11 @@ int main (int argc, char **argv)
     int socket;
     if (ssl) {
         if (debug) {
-            fputs("reading certs...\n", stderr);
+            fputs(_("reading certs...\n"), stderr);
         }
 
         if (bearssl_read_certs(&btas, NULL) == 0) {
-            fputs("couldn't open certs\n", stderr);
+            fputs(_("couldn't open certs\n"), stderr);
             goto early_out;
         }
         br_ssl_client_init_full(&sc, &xc, btas.ta, btas.n);
@@ -291,7 +296,7 @@ int main (int argc, char **argv)
 
     socket = host_connect(link, port, debug);
     if (socket < 0) {
-        fputs("couldn't open socket / find domain\n", stderr);
+        host_connect_error_message();
         goto early_out;
     }
     // avoid crashing on socket release
@@ -307,7 +312,7 @@ int main (int argc, char **argv)
             if (alpn) {
                 fprintf(stderr, "ALPN: %s\n", alpn);
             } else {
-                fputs("ALPN mismatch\n", stderr);
+                fputs(_("ALPN mismatch\n"), stderr);
             }
         }
     }
@@ -351,7 +356,7 @@ int main (int argc, char **argv)
     }
 
     if (written >= going_to_write) {
-        fputs("error: truncated request!\n", stderr);
+        fputs(_("error: truncated request!\n"), stderr);
         goto out;
     }
     if (debug) {
@@ -383,7 +388,7 @@ int main (int argc, char **argv)
         int portn_res =
             clean_up_link((char *)output.data, &scheme_res, &link_res, &path_res, &port_res);
         if (portn_res == -1) {
-            fprintf(stderr, "couldn't clean up received link: %s\n", (char *)output.data);
+            fprintf(stderr, "%s: %s\n", _("couldn't clean up received link"), (char *)output.data);
             goto out;
         }
 
@@ -414,7 +419,7 @@ int main (int argc, char **argv)
         fwrite(output.data, 1, output.offset, output_print);
     } else if ((off_t)fwrite(output.data, 1, output.offset, output_print) < output.offset) {
         // offset is 0 when use_stream is true, so no double printing is done
-        fputs("might not have written all data\n", stderr);
+        fputs(_("might not have written all data\n"), stderr);
     }
 
   out:
