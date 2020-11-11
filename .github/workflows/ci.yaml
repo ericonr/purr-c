@@ -18,3 +18,12 @@ jobs:
          - uses: actions/checkout@v1
          - run: xbps-install -Sy clang make bearssl-devel
          - run: CC=clang ci/run.sh
+   clang-musl-meson:
+      runs-on: ubuntu-latest
+      container: voidlinux/voidlinux-musl
+      steps:
+         - uses: actions/checkout@v1
+         - run: |
+            xbps-install -Syu || xbps-install -yu xbps
+            xbps-install -y clang meson ninja bearssl-devel
+         - run: CC=clang ci/run-meson.sh

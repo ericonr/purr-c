@@ -21,7 +21,15 @@ You can build and install the project with the commands below:
 ```
 $ ./configure # creates config.mk
 $ make
-$ make install PREFIX=$HOME/.local/bin
+$ make install PREFIX=$HOME/.local
+```
+
+Alternatively, you can use the Meson build system:
+
+```
+$ meson build --prefix $HOME/.local
+$ ninja -C build
+$ ninja -C install
 ```
 
 ## Programs
