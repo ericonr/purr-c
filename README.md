@@ -1,5 +1,7 @@
 # purr-c
 
+![Tests](https://github.com/ericonr/purr-c/workflows/Tests/badge.svg?event=push)
+
 This repository holds some loosely related networking projects of mine. This is
 mainly a learning exercise for network, crypto and SSL programming, and all of
 the programs inside should be treated as such.
