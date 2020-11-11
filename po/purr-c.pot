@@ -1,0 +1,130 @@
+# POT for purr-c.
+# Copyright (C) 2020
+# This file is distributed under the same license as the purr-c package.
+# Érico Nogueira <ericonr@disroot.org>, 2020.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: purr-c\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2020-11-11 00:06-0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: gemi.c:27
+msgid ""
+"Usage: gemi [options] <url>\n"
+"Options:\n"
+"    -b: browse mode (experimental)\n"
+"    -p: use pager: value of PAGER (default is less)\n"
+"    -s: don't check server name\n"
+"    -a: accept server's public key\n"
+"    -n: don't strip header\n"
+"    -d: debug\n"
+"    -h: show this dialog\n"
+"    -r: number of redirections (internal use)\n"
+"Environment:\n"
+msgstr ""
+
+#: gemi.c:117
+msgid "this isn't a gemini url!\n"
+msgstr ""
+
+#: gemi.c:127
+msgid "truncated request!\n"
+msgstr ""
+
+#: gemi.c:130
+#, c-format
+msgid "request: %s"
+msgstr ""
+
+#: gemi.c:134
+msgid "bearssl_read_certs(): couldn't read certs!\n"
+msgstr ""
+
+#: gemi.c:144
+msgid "HOME is too long!\n"
+msgstr ""
+
+#: gemi.c:192
+#, c-format
+msgid "error reading cert file: '%s'\n"
+msgstr ""
+
+#: gemi.c:221
+msgid "host_connect(): couldn't open socket or find domain\n"
+msgstr ""
+
+#: gemi.c:262
+msgid "null public key\n"
+msgstr ""
+
+#: gemi.c:265
+#, c-format
+msgid "keytype: %d\n"
+msgstr ""
+
+#: gemi.c:268
+msgid "run with -a to use the obtained public key!\n"
+msgstr ""
+
+#: gemi.c:271
+msgid "trying to connect with obtained public key!\n"
+msgstr ""
+
+#: gemi.c:279
+#, c-format
+msgid "unknown key type: %d\n"
+msgstr ""
+
+#. redirect link was stored in callback
+#: gemi.c:325
+#, c-format
+msgid "redirecting to %s...\n"
+msgstr ""
+
+#: gemi.c:328
+msgid "error: redirect loop detected!\n"
+msgstr ""
+
+#: gemi.c:334
+msgid "error: too many redirections!\n"
+msgstr ""
+
+#: gemi.c:356
+#, c-format
+msgid "Links found: %d\n"
+msgstr ""
+
+#: gemi.c:359
+msgid "Input link number (starts at 0) or control char ('?' or 'i'): "
+msgstr ""
+
+#: gemi.c:375
+#, c-format
+msgid "Selected link: #%02d: %s\n"
+msgstr ""
+
+#: gemi.c:377
+#, c-format
+msgid "Bad number: %d\n"
+msgstr ""
+
+#: gemi.c:396
+msgid "Input new link or path: "
+msgstr ""
+
+#: gemi.c:404
+msgid "Bad input!\n"
+msgstr ""
+
+#: gemi.c:428
+msgid "Unsupported protocol!\n"
+msgstr ""

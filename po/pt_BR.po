@@ -1,0 +1,142 @@
+# Portuguese translations for purr-c package
+# Traduções em português brasileiro para o pacote purr-c.
+# Copyright (C) 2020 THE purr-c'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the purr-c package.
+# Automatically generated, 2020.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: purr-c\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2020-11-11 00:08-0300\n"
+"PO-Revision-Date: 2020-11-11 00:08-0300\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: pt_BR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: gemi.c:27
+msgid ""
+"Usage: gemi [options] <url>\n"
+"Options:\n"
+"    -b: browse mode (experimental)\n"
+"    -p: use pager: value of PAGER (default is less)\n"
+"    -s: don't check server name\n"
+"    -a: accept server's public key\n"
+"    -n: don't strip header\n"
+"    -d: debug\n"
+"    -h: show this dialog\n"
+"    -r: number of redirections (internal use)\n"
+"Environment:\n"
+msgstr ""
+"Uso: gemi [opções] <url>\n"
+"Opçõess:\n"
+"    -b: modo navegador (experimental)\n"
+"    -p: utilizar paginador: valor de PAGER (padrão é o programa less)\n"
+"    -s: não verificar nome do servidor\n"
+"    -a: aceitar chave pública do servidor\n"
+"    -n: não esconder cabeçalho\n"
+"    -d: rodar em modo de debug\n"
+"    -h: mostrar essa mensagem\n"
+"    -r: quantidade de redirecionamentos (uso interno)\n"
+"Ambiente:\n"
+
+#: gemi.c:117
+msgid "this isn't a gemini url!\n"
+msgstr "isso não é um endereço gemini!\n"
+
+#: gemi.c:127
+msgid "truncated request!\n"
+msgstr "o pedido foi truncado!\n"
+
+#: gemi.c:130
+#, c-format
+msgid "request: %s"
+msgstr "pedido: %s"
+
+#: gemi.c:134
+msgid "bearssl_read_certs(): couldn't read certs!\n"
+msgstr "bearssl_read_certs(): não foi possível ler os certificados!\n"
+
+#: gemi.c:144
+msgid "HOME is too long!\n"
+msgstr "HOME é longo demais!\n"
+
+#: gemi.c:192
+#, c-format
+msgid "error reading cert file: '%s'\n"
+msgstr "erro ao ler o arquivo de certificado: '%s'\n"
+
+#: gemi.c:221
+msgid "host_connect(): couldn't open socket or find domain\n"
+msgstr "host_connect(): não foi possível abrir a socket ou achar o domínio\n"
+
+#: gemi.c:262
+msgid "null public key\n"
+msgstr "chave pública nula\n"
+
+#: gemi.c:265
+#, c-format
+msgid "keytype: %d\n"
+msgstr "tipo de chave: %d\n"
+
+#: gemi.c:268
+msgid "run with -a to use the obtained public key!\n"
+msgstr "rode o programa com a opção -a para utilizar a chave pública obtida!\n"
+
+#: gemi.c:271
+msgid "trying to connect with obtained public key!\n"
+msgstr "tentando conectar com a chave pública obtida!\n"
+
+#: gemi.c:279
+#, c-format
+msgid "unknown key type: %d\n"
+msgstr "tipo de chave desconhecido: %d\n"
+
+#. redirect link was stored in callback
+#: gemi.c:325
+#, c-format
+msgid "redirecting to %s...\n"
+msgstr "redirecionando para %s...\n"
+
+#: gemi.c:328
+msgid "error: redirect loop detected!\n"
+msgstr "erro: redirecionamento cíclico detectado!\n"
+
+#: gemi.c:334
+msgid "error: too many redirections!\n"
+msgstr "erro: redirecionamentos demais!\n"
+
+#: gemi.c:356
+#, c-format
+msgid "Links found: %d\n"
+msgstr "Links encontrados: %d\n"
+
+#: gemi.c:359
+msgid "Input link number (starts at 0) or control char ('?' or 'i'): "
+msgstr "Entre o número do link (começa em 0) ou caractere de controle ('?' ou 'i'): "
+
+#: gemi.c:375
+#, c-format
+msgid "Selected link: #%02d: %s\n"
+msgstr "Link selecionado: #%02d: %s\n"
+
+#: gemi.c:377
+#, c-format
+msgid "Bad number: %d\n"
+msgstr "Número ruim: %d\n"
+
+#: gemi.c:396
+msgid "Input new link or path: "
+msgstr "Entre um novo link ou caminho: "
+
+#: gemi.c:404
+msgid "Bad input!\n"
+msgstr "Entrada ruim!\n"
+
+#: gemi.c:428
+msgid "Unsupported protocol!\n"
+msgstr "Protocolo não suportado!\n"

@@ -4,6 +4,8 @@ project('purr-c', 'c',
 
 compiler = meson.get_compiler('c')
 
+subdir('po')
+
 bearssl = compiler.find_library('bearssl', required: true)
 
 gnu_source = '#define _GNU_SOURCE'

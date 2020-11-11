@@ -83,6 +83,21 @@ submitted to the browser torture test.
 
 Usage information can be viewed with `gemi -h`.
 
+## Localization
+
+The Meson build system has been added mainly due to its capabilities for dealing
+with translation via GNU `gettext`. Documentation for these features can be
+found in their [official docs](https://mesonbuild.com/Localisation.html) and
+[module manual](https://mesonbuild.com/i18n-module.html).
+
+For reference, some useful commands:
+
+```
+$ meson purr-c-pot # generate pot file
+$ meson purr-c-update-po # update po files
+$ meson purr-c-gmo # builds translations without installing
+```
+
 ## Acknowledgements
 
 - Thomas Pornin for BearSSL
