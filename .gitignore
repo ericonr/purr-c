@@ -1,6 +1,7 @@
 purr
 tests
 gemi
+build/
 *.o
 *.a
 *.d
