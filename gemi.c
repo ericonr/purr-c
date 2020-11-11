@@ -14,6 +14,7 @@
 #include "read_certs.h"
 #include "gemini.h"
 #include "pager.h"
+#include "translation.h"
 
 #define GEMINI_REQUEST 1024
 
@@ -21,8 +22,8 @@ __attribute__ ((noreturn))
 static void usage(bool fail)
 {
     FILE *stream = fail ? stderr : stdout;
-    fprintf(stream,
-        "Usage: gemi [options] <url>\n"
+    fputs(
+        _("Usage: gemi [options] <url>\n"
         "Options:\n"
         "    -b: browse mode (experimental)\n"
         "    -p: use pager: value of PAGER (default is less)\n"
@@ -32,7 +33,8 @@ static void usage(bool fail)
         "    -d: debug\n"
         "    -h: show this dialog\n"
         "    -r: number of redirections (internal use)\n"
-        "Environment:\n"
+        "Environment:\n"),
+        stream
     );
     bearssl_read_certs_help(stream);
 
@@ -45,6 +47,10 @@ int main(int argc, char **argv)
     bool browse = false, pager = false, check_name = true, accept_pkey = false;
     bool debug = false, no_strip = false;
     int redirections = 0, redirections_pos = 0;
+
+    setlocale(LC_MESSAGES, "");
+    bindtextdomain(GETTEXT_PACKAGE, GETTEXT_DIR);
+    textdomain(GETTEXT_PACKAGE);
 
     int c;
     while ((c = getopt(argc, argv, "+bpsandhr:")) != -1) {
@@ -108,7 +114,7 @@ int main(int argc, char **argv)
     char *scheme = NULL, *domain = NULL, *path = NULL, *port = NULL;
     int portn = clean_up_link(url, &scheme, &domain, &path, &port);
     if (portn != GEMINI_PORT) {
-        fputs("this isn't a gemini url!\n", stderr);
+        fputs(_("this isn't a gemini url!\n"), stderr);
         goto early_out;
     }
     // shouldn't need to normalize path output for things such as trailing slash,
@@ -118,14 +124,14 @@ int main(int argc, char **argv)
     char request[GEMINI_REQUEST];
     int written = snprintf(request, going_to_write, "%s%s%s\r\n", scheme, domain, path);
     if (written >= going_to_write) {
-        fputs("truncated request!\n", stderr);
+        fputs(_("truncated request!\n"), stderr);
         goto early_out;
     }
-    if (debug) fprintf(stderr, "request: %s", request);
+    if (debug) fprintf(stderr, _("request: %s"), request);
 
     struct trust_anchors btas = { 0 };
     if (bearssl_read_certs(&btas, NULL) == 0) {
-        fputs("bearssl_read_certs(): couldn't read certs!\n", stderr);
+        fputs(_("bearssl_read_certs(): couldn't read certs!\n"), stderr);
         goto early_out;
     }
 
@@ -135,7 +141,7 @@ int main(int argc, char **argv)
     if (home) {
         char config[PATH_MAX];
         if (snprintf(config, PATH_MAX, "%s/%s", home, ".config/gemi") >= PATH_MAX) {
-            if (debug) fputs("HOME is too long!\n", stderr);
+            if (debug) fputs(_("HOME is too long!\n"), stderr);
             goto stop_config;
         }
         // can't use O_PATH here, since it's an invalid fd for fdopendir, even duplicated.
@@ -183,7 +189,7 @@ int main(int argc, char **argv)
                 }
 
                 if (bearssl_read_certs(&btas, file_stream) == 0) {
-                    if (debug) fprintf(stderr, "error reading cert file: '%s'\n", name);
+                    if (debug) fprintf(stderr, _("error reading cert file: '%s'\n"), name);
                 }
             } else {
                 close(new_file);
@@ -212,7 +218,7 @@ int main(int argc, char **argv)
 
 
     if ((socket = host_connect(domain, port, debug)) < 0) {
-        fputs("host_connect(): couldn't open socket or find domain\n", stderr);
+        fputs(_("host_connect(): couldn't open socket or find domain\n"), stderr);
     }
 
     signal(SIGPIPE, SIG_IGN);
@@ -253,16 +259,16 @@ int main(int argc, char **argv)
         unsigned int usages;
         const br_x509_pkey *pkey = xc.vtable->get_pkey(&xc.vtable, &usages);
         if (pkey == NULL) {
-            if (debug) fputs("null public key\n", stderr);
+            if (debug) fputs(_("null public key\n"), stderr);
             goto early_out;
         } else {
-            if (debug) fprintf(stderr, "keytype: %d\n", pkey->key_type);
+            if (debug) fprintf(stderr, _("keytype: %d\n"), pkey->key_type);
 
             if (!accept_pkey) {
-                fputs("run with -a to use the obtained public key!\n", stderr);
+                fputs(_("run with -a to use the obtained public key!\n"), stderr);
                 goto early_out;
             }
-            fputs("trying to connect with obtained public key!\n", stderr);
+            fputs(_("trying to connect with obtained public key!\n"), stderr);
 
             br_x509_knownkey_context kkc;
             if (pkey->key_type == BR_KEYTYPE_RSA) {
@@ -270,7 +276,7 @@ int main(int argc, char **argv)
             } else if (pkey->key_type == BR_KEYTYPE_EC) {
                 br_x509_knownkey_init_ec(&kkc, &pkey->key.ec, usages);
             } else {
-                fprintf(stderr, "unknown key type: %d\n", pkey->key_type);
+                fprintf(stderr, _("unknown key type: %d\n"), pkey->key_type);
                 goto early_out;
             }
 
@@ -316,16 +322,16 @@ int main(int argc, char **argv)
     if (redirect_link) {
         redirections += 1;
         // redirect link was stored in callback
-        fprintf(stderr, "redirecting to %s...\n", redirect_link);
+        fprintf(stderr, _("redirecting to %s...\n"), redirect_link);
         if (strcmp(redirect_link, url) == 0) {
             rv = EXIT_FAILURE;
-            fputs("error: redirect loop detected!\n", stderr);
+            fputs(_("error: redirect loop detected!\n"), stderr);
             goto early_out;
         }
 
         if (redirections > 4) {
             rv = EXIT_FAILURE;
-            fputs("error: too many redirections!\n", stderr);
+            fputs(_("error: too many redirections!\n"), stderr);
             goto early_out;
         }
         char redirections_s[24] = { 0 };
@@ -347,10 +353,10 @@ int main(int argc, char **argv)
     if (browse) {
         struct gemini_link_node *head = NULL;
         int n = get_links_from_gmi((char *)output.data, &head);
-        fprintf(stderr, "Links found: %d\n", n);
+        fprintf(stderr, _("Links found: %d\n"), n);
         if (n > 0) {
             while (1) {
-                fputs("Input link number (starts at 0) or control char ('?' or 'i'): ", stderr);
+                fputs(_("Input link number (starts at 0) or control char ('?' or 'i'): "), stderr);
                 int in;
                 int err = scanf("%d", &in);
                 char *new_arg;
@@ -366,9 +372,9 @@ int main(int argc, char **argv)
                     if (in >= 0 && in < n) {
                         // in is a valid link number
                         new_arg = get_gemini_node_by_n(head, in)->path;
-                        fprintf(stderr, "Selected link: #%02d: %s\n", in, new_arg);
+                        fprintf(stderr, _("Selected link: #%02d: %s\n"), in, new_arg);
                     } else {
-                        fprintf(stderr, "Bad number: %d\n", in);
+                        fprintf(stderr, _("Bad number: %d\n"), in);
                         continue;
                     }
                 } else {
@@ -387,7 +393,7 @@ int main(int argc, char **argv)
                             perror("calloc()");
                             goto early_out;
                         }
-                        fputs("Input new link or path: ", stderr);
+                        fputs(_("Input new link or path: "), stderr);
                         err = scanf("%1023s", new_arg);
                         if (err == EOF) {
                             // clean exit on EOF
@@ -395,7 +401,7 @@ int main(int argc, char **argv)
                             goto early_out;
                         }
                     } else {
-                        fputs("Bad input!\n", stderr);
+                        fputs(_("Bad input!\n"), stderr);
                         continue;
                     }
                 }
@@ -419,7 +425,7 @@ int main(int argc, char **argv)
                     sprintf(new_url, "%s%s%s", scheme, domain, clean_path);
                     new_argv[new_arg_pos] = new_url;
                 } else if (new_portn != GEMINI_PORT) {
-                    fputs("Unsupported protocol!\n", stderr);
+                    fputs(_("Unsupported protocol!\n"), stderr);
                     goto link_error;
                 }
 
