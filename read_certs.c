@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "read_certs.h"
+#include "translation.h"
 
 struct append_dn_status {
     uint8_t *dn;
@@ -13,7 +14,8 @@ struct append_dn_status {
 void bearssl_read_certs_help(FILE *stream)
 {
     fprintf(stream,
-        "    CA_CERT_SSL_FILE: certificates file, default is /etc/ssl/certs.pem\n"
+        "    %s\n",
+        _("CA_CERT_SSL_FILE: certificates file, default is /etc/ssl/certs.pem")
     );
 }
 
@@ -141,7 +143,7 @@ size_t bearssl_read_certs(struct trust_anchors *tas, FILE *file)
             case BR_PEM_END_OBJ:
                 err = br_x509_decoder_last_error(&x509);
                 if (err) {
-                    fprintf(stderr, "X509 err code: %d\n", err);
+                    fprintf(stderr, _("X509 err code: %d\n"), err);
                 } else {
                     // decoded succesfully, now to get the data
                     br_x509_trust_anchor ta =
@@ -190,7 +192,7 @@ size_t bearssl_read_certs(struct trust_anchors *tas, FILE *file)
                         new_key.key_type = BR_KEYTYPE_EC;
                         new_key.key.ec = ec;
                     } else {
-                        fputs("non supported key\n", stderr);
+                        fputs(_("non supported key\n"), stderr);
                     }
 
                     ta.pkey = new_key;

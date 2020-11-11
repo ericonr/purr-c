@@ -13,6 +13,7 @@
 #include <sys/socket.h>
 
 #include "purr.h"
+#include "translation.h"
 
 #define MAX_DOMAIN_LEN 254
 #define MAX_SHORTY_LEN 16
@@ -35,7 +36,7 @@ int get_port_from_link(const char *url)
     if (scheme_separator) {
         // found protocol specified, otherwise return error
         if (scheme_separator - url + 3 > MAX_SHORTY_LEN) {
-            fputs("get_port_from_link(): scheme is too long!\n", stderr);
+            fprintf(stderr, "get_port_from_link(): %s\n", _("scheme is too long"));
             return portn;
         }
         size_t scheme_len = scheme_separator - url + 3;
@@ -47,7 +48,7 @@ int get_port_from_link(const char *url)
             portn = GEMINI_PORT;
         } else {
             portn = UNKNOWN_PORT;
-            fputs("clean_up_link(): unknown protocol!\n", stderr);
+            fprintf(stderr, "clean_up_link(): %s\n", _("unknown protocol"));
         }
     }
 
@@ -88,7 +89,7 @@ int clean_up_link(const char *dirty, char **schemep, char **cleanp, char **pathp
     portn = get_port_from_link(dirty);
     bool get_scheme_len = true;
     if (portn == UNKNOWN_PORT) {
-        fputs("clean_up_link(): unknown protocol!\n", stderr);
+        fprintf(stderr, "clean_up_link(): %s\n", _("unknown protocol"));
         return portn;
     } else if (portn == NO_INFO_PORT || portn == HTTP_PORT) {
         // no scheme defined -> default to HTTP
@@ -123,7 +124,7 @@ int clean_up_link(const char *dirty, char **schemep, char **cleanp, char **pathp
     return portn;
 }
 
-#define MALFORM_ERROR(p) do{if((p) == NULL || (p)[1] == 0) {fputs("get_encryption_params(): malformed URL\n", stderr); return rv;}}while(0);
+#define MALFORM_ERROR(p) do{if((p) == NULL || (p)[1] == 0) {fprintf(stderr, "get_encryption_params(): %s\n", _("malformed URL")); return rv;}}while(0);
 
 /*
  * This function extracts encryption parameters from a path.
@@ -162,14 +163,14 @@ int get_encryption_params(char *path, uint8_t **keyp, uint8_t **ivp)
     size_t key_s_len = strlen(key_start), iv_s_len = strlen(iv_start);
     // odd number of chars is an error, as well as being too big
     if (key_s_len & 1 || iv_s_len & 1 || key_s_len / 2 > KEY_LEN || iv_s_len / 2 > IV_LEN) {
-        fputs("get_encryption_params(): malformed KEY and/or IV input\n", stderr);
+        fprintf(stderr, "get_encryption_params(): %s\n", _("malformed KEY and/or IV input"));
         return rv;
     }
 
     int err = decode_hex(key_start, key, key_s_len / 2)
         | decode_hex(iv_start, iv, iv_s_len / 2);
     if (err) {
-        fputs("get_encryption_params(): malformed KEY and/or IV input\n", stderr);
+        fprintf(stderr, "get_encryption_params(): %s\n", _("malformed KEY and/or IV input"));
         return rv;
     }
 
@@ -206,12 +207,12 @@ int host_connect(const char *host, const char *port, bool debug)
             struct sockaddr_in6 *remote = (struct sockaddr_in6 *)p->ai_addr;
             addr = &remote->sin6_addr;
         } else {
-            fputs("host_connect(): unsupported addr result\n", stderr);
+            fprintf(stderr, "host_connect(): %s\n", _("unsupported addr result"));
             continue;
         }
 
         inet_ntop(p->ai_family, addr, ip_addr, INET6_ADDRSTRLEN);
-        if (debug) fprintf(stderr, "IP addr: %s\n", ip_addr);
+        if (debug) fprintf(stderr, "%s: %s\n", _("IP address"), ip_addr);
 
         // try to establish connection
         fd = socket(p->ai_family, p->ai_socktype | SOCKET_FLAG, p->ai_protocol);
@@ -237,4 +238,9 @@ int host_connect(const char *host, const char *port, bool debug)
 
     freeaddrinfo(si);
     return fd;
+}
+
+void host_connect_error_message(void)
+{
+    fprintf(stderr, "host_connect(): %s\n", _("couldn't open socket or find domain"));
 }

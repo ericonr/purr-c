@@ -124,7 +124,7 @@ int main(int argc, char **argv)
     char request[GEMINI_REQUEST];
     int written = snprintf(request, going_to_write, "%s%s%s\r\n", scheme, domain, path);
     if (written >= going_to_write) {
-        fputs(_("truncated request!\n"), stderr);
+        fputs(_("error: truncated request!\n"), stderr);
         goto early_out;
     }
     if (debug) fprintf(stderr, _("request: %s"), request);
@@ -218,7 +218,7 @@ int main(int argc, char **argv)
 
 
     if ((socket = host_connect(domain, port, debug)) < 0) {
-        fputs(_("host_connect(): couldn't open socket or find domain\n"), stderr);
+        host_connect_error_message();
     }
 
     signal(SIGPIPE, SIG_IGN);
