@@ -8,5 +8,6 @@ i18n.gettext(
 add_project_arguments(
   '-DGETTEXT_PACKAGE="@0@"'.format(meson.project_name()),
   '-DGETTEXT_DIR="@0@"'.format(get_option('prefix') / get_option('localedir')),
+  '-DUSE_LIBINTL',
   language:'c'
 )
