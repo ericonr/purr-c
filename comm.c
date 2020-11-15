@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "purr.h"
+#include "translation.h"
 
 int send_and_receive(struct connection_information *ci)
 {
@@ -50,9 +51,9 @@ int send_and_receive(struct connection_information *ci)
             if (ci->debug) {
                 // this isn't critical information
                 if (alpn_name == NULL) {
-                    fputs("ALPN mismatch\n", stderr);
+                    fputs(_("ALPN mismatch\n"), stderr);
                 } else {
-                    fprintf(stderr, "ALPN: %s\n", alpn_name);
+                    fprintf(stderr, _("ALPN: %s\n"), alpn_name);
                 }
             }
         }
@@ -63,10 +64,10 @@ int send_and_receive(struct connection_information *ci)
     if (ci->send) {
         size_t sent = mmap_to_ssl(ti);
         if (sent == 0) {
-            fputs("warning: empty input file...\n", stderr);
+            fputs(_("warning: empty input file...\n"), stderr);
         }
         if (ci->debug) {
-            fprintf(stderr, "wrote %lu bytes!\n", sent);
+            fprintf(stderr, _("wrote %lu bytes!\n"), sent);
         }
     }
     if (ti.ssl) br_sslio_flush(ci->ioc);
@@ -74,7 +75,7 @@ int send_and_receive(struct connection_information *ci)
     ti.file = ci->output;
 
     if (ssl_to_mmap(ti) == 0) {
-        fputs("warning: empty response...\n", stderr);
+        fputs(_("warning: empty response...\n"), stderr);
     }
 
     if (ti.ssl) {
@@ -86,7 +87,7 @@ int send_and_receive(struct connection_information *ci)
         // source: https://security.stackexchange.com/questions/82028/ssl-tls-is-a-server-always-required-to-respond-to-a-close-notify
         if (br_sslio_close(ci->ioc) != 0) {
             if (ci->debug) {
-                fputs("couldn't close SSL connection!\n", stderr);
+                fputs(_("TLS: couldn't close SSL connection!\n"), stderr);
             }
         }
 
@@ -98,18 +99,18 @@ int send_and_receive(struct connection_information *ci)
         if (br_ssl_engine_current_state(&ci->sc->eng) == BR_SSL_CLOSED) {
             const int err = br_ssl_engine_last_error(&ci->sc->eng);
             if (err == BR_ERR_OK) {
-                if (ci->debug) fputs("all good!\n", stderr);
+                if (ci->debug) fputs(_("TLS: all good!\n"), stderr);
                 rv = EXIT_SUCCESS;
             } else if (err == BR_ERR_IO) {
-                if (ci->debug) fputs("I/O error, not critical\n", stderr);
+                if (ci->debug) fputs(_("TLS: non-critical I/O error\n"), stderr);
                 rv = EXIT_SUCCESS;
             } else {
-                fprintf(stderr, "SSL error: %d\n", err);
+                fprintf(stderr, _("TLS: BearSSL error: %d\n"), err);
                 rv = EXIT_FAILURE;
             }
         } else {
             // this case shouldn't happen, since br_sslio_close is called above.
-            if (ci->debug) fputs("socket closed without terminating ssl!\n", stderr);
+            if (ci->debug) fputs(_("socket closed without terminating ssl!\n"), stderr);
             rv = EXIT_SUCCESS;
         }
     }

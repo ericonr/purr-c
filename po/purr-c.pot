@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: purr-c\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-11-11 01:28-0300\n"
+"POT-Creation-Date: 2020-11-15 20:45-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -190,7 +190,7 @@ msgstr ""
 msgid "couldn't open certs\n"
 msgstr ""
 
-#: purr.c:310
+#: purr.c:310 comm.c:54
 msgid "ALPN mismatch\n"
 msgstr ""
 
@@ -229,6 +229,46 @@ msgstr ""
 
 #: urls.c:245
 msgid "couldn't open socket or find domain"
+msgstr ""
+
+#: comm.c:56
+#, c-format
+msgid "ALPN: %s\n"
+msgstr ""
+
+#: comm.c:67
+msgid "warning: empty input file...\n"
+msgstr ""
+
+#: comm.c:70
+#, c-format
+msgid "wrote %lu bytes!\n"
+msgstr ""
+
+#: comm.c:78
+msgid "warning: empty response...\n"
+msgstr ""
+
+#: comm.c:90
+msgid "TLS: couldn't close SSL connection!\n"
+msgstr ""
+
+#: comm.c:102
+msgid "TLS: all good!\n"
+msgstr ""
+
+#: comm.c:105
+msgid "TLS: non-critical I/O error\n"
+msgstr ""
+
+#: comm.c:108
+#, c-format
+msgid "TLS: BearSSL error: %d\n"
+msgstr ""
+
+#. this case shouldn't happen, since br_sslio_close is called above.
+#: comm.c:113
+msgid "socket closed without terminating ssl!\n"
 msgstr ""
 
 #: read_certs.c:18

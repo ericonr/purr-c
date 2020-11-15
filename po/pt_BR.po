@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: purr-c\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-11-11 01:28-0300\n"
+"POT-Creation-Date: 2020-11-15 20:45-0300\n"
 "PO-Revision-Date: 2020-11-11 00:08-0300\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -219,7 +219,7 @@ msgstr "lendo certificados...\n"
 msgid "couldn't open certs\n"
 msgstr "não foi possível abrir certificados\n"
 
-#: purr.c:310
+#: purr.c:310 comm.c:54
 msgid "ALPN mismatch\n"
 msgstr "desencontro de ALPN\n"
 
@@ -260,6 +260,46 @@ msgstr "endereço IP"
 msgid "couldn't open socket or find domain"
 msgstr "não foi possível abrir a socket ou achar o domínio"
 
+#: comm.c:56
+#, c-format
+msgid "ALPN: %s\n"
+msgstr "ALPN: %s\n"
+
+#: comm.c:67
+msgid "warning: empty input file...\n"
+msgstr "aviso: arquivo de entrada vazio...\n"
+
+#: comm.c:70
+#, c-format
+msgid "wrote %lu bytes!\n"
+msgstr "escreveu %lu bytes!\n"
+
+#: comm.c:78
+msgid "warning: empty response...\n"
+msgstr "aviso: resposta vazia...\n"
+
+#: comm.c:90
+msgid "TLS: couldn't close SSL connection!\n"
+msgstr "TLS: não foi possível fechar a conexão SSL!\n"
+
+#: comm.c:102
+msgid "TLS: all good!\n"
+msgstr "TLS: tudo certo!\n"
+
+#: comm.c:105
+msgid "TLS: non-critical I/O error\n"
+msgstr "TLS: erro de I/O (entrada/saída) não crítico\n"
+
+#: comm.c:108
+#, c-format
+msgid "TLS: BearSSL error: %d\n"
+msgstr "TLS: erro da biblioteca BearSSL: %d\n"
+
+#. this case shouldn't happen, since br_sslio_close is called above.
+#: comm.c:113
+msgid "socket closed without terminating ssl!\n"
+msgstr "socket fechada sem terminal ssl!\n"
+
 #: read_certs.c:18
 msgid "CA_CERT_SSL_FILE: certificates file, default is /etc/ssl/certs.pem"
 msgstr "CA_CERT_SSL_FILE: arquivo de certificados, padrão é /etc/ssl/certs.pem"
@@ -271,4 +311,4 @@ msgstr "código de erro X509: %d\n"
 
 #: read_certs.c:195
 msgid "non supported key\n"
-msgstr "chave não suportado\n"
+msgstr "chave não suportada\n"
