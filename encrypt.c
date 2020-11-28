@@ -16,6 +16,7 @@
  * expected by the other PurritoBin clients.
  */
 
+#define _DEFAULT_SOURCE /* getentropy */
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -62,23 +63,15 @@ struct mmap_file encrypt_mmap(struct mmap_file file, uint8_t **keyp, uint8_t **i
         return rv;
     }
 
-    ssize_t err = getrandom(key, KEY_LEN, 0);
-    if (err != KEY_LEN) {
-        fputs("getrandom() error!\n", stderr);
+    if (getentropy(key, KEY_LEN) < 0) {
+        perror("getentropy()");
         return rv;
     }
     #ifdef RANDOMIZE_IV
-    #ifdef HAVE_GETRANDOM
-    err = getrandom(iv, IV_LEN, 0);
-    if (err != IV_LEN) {
-        fputs("getrandom() error!\n", stderr);
+    if (getentropy(iv, IV_LEN) < 0) {
+        perror("getentropy()");
         return rv;
     }
-    #elif HAVE_ARC4RANDOM
-    arc4random_buf(iv, IV_LEN);
-    #else
-    #error "no random buf impl"
-    #endif /* GETRANDOM & ARC4RANDOM */
     memcpy(iv_throwaway, iv, IV_LEN);
     #endif /* RANDOMIZE_IV */
 

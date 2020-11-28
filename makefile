@@ -12,7 +12,7 @@ LDLIBS += -lbearssl
 LDFLAGS += $(CFLAGS) -Wl,--as-needed
 
 PURROBJS = socket.o urls.o files.o comm.o formats.o encrypt.o mmap_file.o
-PURROBJS += read_certs.o gemini.o pager.o
+PURROBJS += read_certs.o gemini.o pager.o compat.o
 
 LIBSOBJS = $(PURROBJS)
 

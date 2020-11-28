@@ -9,8 +9,6 @@ subdir('po')
 bearssl = compiler.find_library('bearssl', required: true)
 
 gnu_source = '#define _GNU_SOURCE'
-getrandom = compiler.has_header_symbol('sys/random.h', 'getrandom')
-arc4random = compiler.has_header_symbol('stdlib.h', 'arc4random')
 gnu_progname = compiler.has_header_symbol(
   'errno.h',
   'program_invocation_short_name',
@@ -21,13 +19,6 @@ sock_cloexec = compiler.has_header_symbol('sys/socket.h', 'SOCK_CLOEXEC')
 pipe2 = compiler.has_header_symbol('unistd.h', 'pipe2', prefix: gnu_source)
 
 args = []
-if arc4random
-  args += '-DHAVE_ARC4RANDOM'
-elif getrandom
-  args += '-DHAVE_GETRANDOM'
-else
-  error('no random buf impl')
-endif
 if bsd_progname
   args += '-DHAVE_GETPROGNAME'
 elif gnu_progname
@@ -55,6 +46,7 @@ purrlib = static_library(
   'formats.c',
   'encrypt.c',
   'socket.c',
+  'compat.c',
 )
 
 executable('purr', 'purr.c', link_with: purrlib, dependencies: bearssl, install: true)

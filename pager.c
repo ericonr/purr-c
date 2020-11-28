@@ -1,7 +1,4 @@
 #define _POSIX_C_SOURCE 200112L /* fdopen, nanosleep */
-#ifdef HAVE_PIPE2
-#define _GNU_SOURCE /* pipe2 */
-#endif /* HAVE_PIPE2 */
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -10,9 +7,9 @@
 #include <spawn.h>
 #include <time.h>
 #include <sys/wait.h>
-#include <fcntl.h> /* O_CLOEXEC or fcntl */
 
 #include "pager.h"
+#include "compat.h"
 
 int launch_pager(struct pager_proc *p)
 {
@@ -22,20 +19,10 @@ int launch_pager(struct pager_proc *p)
 
     // using close-on-exec here is safe, because fds created by dup don't
     // inherit flags
-    #ifdef HAVE_PIPE2
-    // atomic application of close-on-exec
-    if (pipe2(pipes, O_CLOEXEC) < 0) {
-        perror("pipe2()");
-    }
-    #else
-    // delayed application of close-on-exec
-    if (pipe(pipes) < 0) {
-        perror("pipe()");
+    if (pipe_cloexec(pipes)) {
+        perror("pipe_cloexec()");
         return rv;
     }
-    fcntl(pipes[0], F_SETFD, FD_CLOEXEC);
-    fcntl(pipes[1], F_SETFD, FD_CLOEXEC);
-    #endif /* HAVE_PIPE2 */
 
     char *pager = getenv("PAGER");
     if (pager == NULL || *pager == 0) {

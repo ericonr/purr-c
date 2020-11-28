@@ -1,10 +1,4 @@
 #define _POSIX_C_SOURCE 200112L /* getopt */
-
-#ifdef HAVE_PROG_INVOCATION
-#define _GNU_SOURCE /* program_invocation_short_name */
-#include <errno.h>
-#endif /* HAVE_PROG_INVOCATION */
-
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -14,28 +8,27 @@
 #include <bearssl.h>
 
 #include "purr.h"
+#include "compat.h"
 #include "mmap_file.h"
 #include "read_certs.h"
 #include "translation.h"
-
-const char *progname;
 
 __attribute__ ((noreturn))
 static void usage(bool fail)
 {
     char *proghelp;
-    if (strcmp(progname, "meow") == 0) {
+    if (strcmp(program_name(), "meow") == 0) {
         proghelp = _(
             "Usage: meow [options] <file>\n"
             "    send <file> in encrypted format\n");
-    } else if (strcmp(progname, "meowd") == 0) {
+    } else if (strcmp(program_name(), "meowd") == 0) {
         proghelp = _(
             "Usage meowd [options] <url>\n"
             "    receive encrypted file from <url>\n");
     } else {
-       proghelp = _(
-           "Usage: purr [options] <action> <file>|<url>\n"
-           "    action: s[end] | r[ecv]\n");
+        proghelp = _(
+            "Usage: purr [options] <action> <file>|<url>\n"
+            "    action: s[end] | r[ecv]\n");
     }
 
     FILE *stream = fail ? stderr : stdout;
@@ -71,21 +64,13 @@ int main (int argc, char **argv)
     bindtextdomain(GETTEXT_PACKAGE, GETTEXT_DIR);
     textdomain(GETTEXT_PACKAGE);
 
-    #ifdef HAVE_PROG_INVOCATION
-    progname = program_invocation_short_name;
-    #elif HAVE_GETPROGNAME
-    progname = getprogname();
-    #else
-    #error "no progname impl"
-    #endif /* PROG_INVOCATION & GETPROGNAME */
-
     // check program name:
     // symlinks to original program with special behavior
-    if (strcmp(progname, "meow") == 0) {
+    if (strcmp(program_name(), "meow") == 0) {
         // encrypted send mode
         send = true;
         encrypt = true;
-    } else if (strcmp(progname, "meowd") == 0) {
+    } else if (strcmp(program_name(), "meowd") == 0) {
         // encrypted recv mode
         recv = true;
         encrypt = true;

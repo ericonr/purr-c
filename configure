@@ -6,31 +6,6 @@ ARGS="${CFLAGS} ${LDFLAGS} -x c -o /dev/null -"
 printf "" > config.mk
 
 $CC $ARGS <<EOF 2>/dev/null
-#include <sys/random.h>
-int main() {
-	ssize_t (*p)(void *, size_t, unsigned int) = getrandom;
-}
-EOF
-[ $? -eq 0 ] && HAVE_GETRANDOM=yes
-
-$CC $ARGS <<EOF 2>/dev/null
-#include <stdlib.h>
-int main() {
-	void (*p)(void *, size_t) = arc4random_buf;
-}
-EOF
-[ $? -eq 0 ] && HAVE_ARC4RANDOM=yes
-
-echo "HAVE_GETRANDOM:$HAVE_GETRANDOM"
-echo "HAVE_ARC4RANDOM:$HAVE_ARC4RANDOM"
-
-if [ "$HAVE_ARC4RANDOM" ]; then
-	echo "DEFS += -DHAVE_ARC4RANDOM" >> config.mk
-elif [ "$HAVE_GETRANDOM" ]; then
-	echo "DEFS += -DHAVE_GETRANDOM" >> config.mk
-fi
-
-$CC $ARGS <<EOF 2>/dev/null
 #define _GNU_SOURCE /* program_invocation_short_name */
 #include <errno.h>
 int main() {
