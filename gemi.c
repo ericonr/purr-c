@@ -1,4 +1,4 @@
-#define _POSIX_C_SOURCE 200809L /* getopt, openat, fdopendir */
+#define _POSIX_C_SOURCE 200809L /* getopt, openat */
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <limits.h>
+#include <fnmatch.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -142,62 +143,43 @@ int main(int argc, char **argv)
             if (debug) fputs(_("HOME is too long!\n"), stderr);
             goto stop_config;
         }
-        // can't use O_PATH here, since it's an invalid fd for fdopendir, even duplicated.
-        // XXX: find optimal order of open() and opendir() calls
-        int config_fd = open(config, O_DIRECTORY | O_CLOEXEC);
-        if (config_fd < 0) {
-            if (debug) perror("open()");
+        DIR *config_dir = opendir(config);
+        if (config_dir == NULL) {
+            perror("opendir()");
             goto stop_config;
         }
-
-        int config_fd_tmp = dup(config_fd);
-        if (config_fd_tmp < 0) {
-            perror("dup()");
-            goto stop_search;
-        }
-        // POSIX doesn't specify whether fdopendir sets close-on-exec
-        fcntl(config_fd_tmp, F_SETFD, FD_CLOEXEC);
-        DIR *config_dir = fdopendir(config_fd_tmp);
-        if (config_dir == NULL) {
-            perror("fdopendir()");
-            close(config_fd_tmp);
-            goto stop_search;
-        }
+        // this fd can only be used for openat
+        int config_fd = dirfd(config_dir);
 
         struct dirent *config_file;
         while ((config_file = readdir(config_dir))) {
             const char *name = config_file->d_name;
-            if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0) {
-                continue;
-            }
-
-            int new_file = openat(config_fd, name, O_RDONLY | O_CLOEXEC);
-            if (new_file < 0) {
-                perror("openat()");
-                continue;
-            }
-
-            struct stat st;
-            fstat(new_file, &st);
-            if ((st.st_mode & S_IFMT) == S_IFREG) {
-                FILE *file_stream = fdopen(new_file, "re");
-                if (file_stream == NULL) {
-                    close(new_file);
+            // this can probably be sped up by using stuff from string.h
+            if (fnmatch("*.pem", name, 0) == 0) {
+                int new_file = openat(config_fd, name, O_RDONLY | O_CLOEXEC);
+                if (new_file < 0) {
+                    perror("openat()");
                     continue;
                 }
+                struct stat st;
+                fstat(new_file, &st);
+                if ((st.st_mode & S_IFMT) == S_IFREG) {
+                    FILE *file_stream = fdopen(new_file, "re");
+                    if (file_stream == NULL) {
+                        close(new_file);
+                        continue;
+                    }
 
-                if (bearssl_read_certs(&btas, file_stream) == 0) {
-                    if (debug) fprintf(stderr, _("error reading cert file: '%s'\n"), name);
+                    if (bearssl_read_certs(&btas, file_stream) == 0 && debug) {
+                        fprintf(stderr, _("error reading cert file: '%s'\n"), name);
+                    }
+                } else {
+                    close(new_file);
                 }
-            } else {
-                close(new_file);
             }
-
         }
 
         closedir(config_dir);
-      stop_search:
-        close(config_fd);
     }
 
     br_ssl_client_context sc;
