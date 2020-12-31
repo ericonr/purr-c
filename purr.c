@@ -60,9 +60,7 @@ int main (int argc, char **argv)
 
     bool send = false, recv = false;
 
-    setlocale(LC_MESSAGES, "");
-    bindtextdomain(GETTEXT_PACKAGE, GETTEXT_DIR);
-    textdomain(GETTEXT_PACKAGE);
+    loc_init();
 
     // check program name:
     // symlinks to original program with special behavior

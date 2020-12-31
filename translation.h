@@ -1,27 +1,27 @@
 #ifndef __TRANSLATION_H_
 #define __TRANSLATION_H_
 
-#ifdef USE_LIBINTL
-
 #include <locale.h>
-#include <libintl.h>
-#define _(a) gettext(a)
 
-#ifndef GETTEXT_PACKAGE
-#define GETTEXT_PACKAGE NULL
-#endif /* GETTEXT_DOMAIN */
-
-#ifndef GETTEXT_DIR
-#define GETTEXT_DIR NULL
-#endif /* GETTEXT_DIR */
-
+#ifdef USE_LIBINTL
+# include <libintl.h>
+# define _(a) gettext(a)
 #else /* USE_LIBINTL */
-
-#define _(a) a
-#define setlocale(a,b)
-#define bindtextdomain(a,b)
-#define textdomain(a)
-
+# define _(a) a
 #endif /* USE_LIBINTL */
+
+// use this only in main()
+static inline void loc_init(void)
+{
+    // so libc understands utf8
+    setlocale(LC_CTYPE, "");
+    // so messages are localized
+    setlocale(LC_MESSAGES, "");
+#ifdef USE_LIBINTL
+    // to load my localization
+    bindtextdomain(GETTEXT_PACKAGE, GETTEXT_DIR);
+    textdomain(GETTEXT_PACKAGE);
+#endif
+}
 
 #endif // __TRANSLATION_H_

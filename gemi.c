@@ -48,9 +48,7 @@ int main(int argc, char **argv)
     bool debug = false, no_strip = false;
     int redirections = 0, redirections_pos = 0;
 
-    setlocale(LC_MESSAGES, "");
-    bindtextdomain(GETTEXT_PACKAGE, GETTEXT_DIR);
-    textdomain(GETTEXT_PACKAGE);
+    loc_init();
 
     int c;
     while ((c = getopt(argc, argv, "+bpsandhr:")) != -1) {
