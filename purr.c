@@ -155,11 +155,6 @@ int main (int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    // avoid warning about maybe-uninitialized url
-    // TODO: compiler bug?
-    if (!recv && !send) {
-        usage(true);
-    }
     char *url;
     if (recv) {
         if (argc != 2) {
