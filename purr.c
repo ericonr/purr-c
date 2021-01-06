@@ -1,5 +1,4 @@
 #define _POSIX_C_SOURCE 200112L /* getopt */
-#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -277,8 +276,6 @@ int main (int argc, char **argv)
         host_connect_error_message();
         goto early_out;
     }
-    // avoid crashing on socket release
-    signal(SIGPIPE, SIG_IGN);
 
     const char *alpn = NULL;
     if (ssl) {

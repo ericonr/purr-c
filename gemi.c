@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdlib.h>
-#include <signal.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <limits.h>
@@ -200,8 +199,6 @@ int main(int argc, char **argv)
     if ((socket = host_connect(domain, port, debug)) < 0) {
         host_connect_error_message();
     }
-
-    signal(SIGPIPE, SIG_IGN);
 
     FILE *output_stream = stdout;
     struct pager_proc pager_info;
