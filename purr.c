@@ -191,7 +191,7 @@ int main (int argc, char **argv)
             url = url_opt;
         } else {
             // http for now
-            url = "http://bsd.ac";
+            url = "https://bsd.ac";
         }
     }
 
