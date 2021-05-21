@@ -1,3 +1,4 @@
+#define _GNU_SOURCE /* strcasestr */
 #include <stdlib.h>
 #include <unistd.h>
 #include <assert.h>
@@ -99,8 +100,8 @@ size_t ssl_to_mmap(struct transmission_information ti)
 
             if (ti.type == HTTP_CONN) {
                 // http headers need to be parsed for content length
-                const char *needle = "Content-Length: ";
-                char *length = strstr(st.header, needle);
+                const char *needle = "content-length: ";
+                char *length = strcasestr(st.header, needle);
                 if (length == NULL) {
                     fputs("header didn't contain content-length field\n", stderr);
                     rv = 0;
