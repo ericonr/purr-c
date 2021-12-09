@@ -313,21 +313,21 @@ int main (int argc, char **argv)
         written = snprintf(
             request, going_to_write,
             "GET %s %s\r\n"
-            "Host: %s:%s\r\n" // most 1.0 servers require it
+            "Host: %s\r\n" // most 1.0 servers require it
             "Accept: */*\r\n" // some servers can complain if it isn't present
             "Accept-Encoding: identity\r\n" // avoid compressed content
             "\r\n",
-            path, http_ver, link, port);
+            path, http_ver, link);
     } else if (send) {
         written = snprintf(
             request, going_to_write,
             "POST %s %s\r\n"
-            "Host: %s:%s\r\n"
+            "Host: %s\r\n"
             "Accept: */*\r\n"
             "Content-Length: %lu\r\n" // required in most cases and good practice
             "Content-Type: application/octet-stream\r\n" // can be any file type
             "\r\n",
-            path, http_ver, link, port, input.size);
+            path, http_ver, link, input.size);
     }
 
     if (written >= going_to_write) {
