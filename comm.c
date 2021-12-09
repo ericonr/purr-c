@@ -70,7 +70,13 @@ int send_and_receive(struct connection_information *ci)
             fprintf(stderr, _("wrote %lu bytes!\n"), sent);
         }
     }
-    if (ti.ssl) br_sslio_flush(ci->ioc);
+
+    if (ti.ssl) {
+        br_sslio_write_all(ci->ioc, ci->footer, ci->footer_size);
+        br_sslio_flush(ci->ioc);
+    } else {
+        fwrite(ci->footer, 1, ci->footer_size, ti.socket_write_stream);
+    }
 
     ti.file = ci->output;
 

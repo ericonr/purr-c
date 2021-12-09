@@ -57,7 +57,8 @@ Instead of using Ninja, you can use
 
 This is a pure C client for the
 [PurritoBin](https://github.com/PurritoBin/PurritoBin) pastebin server, and uses
-PurritoBin's author's instance in <https://bsd.ac> by default.
+PurritoBin's author's instance at <https://bsd.ac> by default. It also supports
+[zdykstra's pastebin](https://github.com/zdykstra/pastebin).
 
 It supports symmetric paste encryption (as supported by PurritoBin's online
 interface and its [suggested

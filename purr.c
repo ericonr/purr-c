@@ -1,4 +1,5 @@
 #define _POSIX_C_SOURCE 200112L /* getopt */
+#include <libgen.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,6 +39,7 @@ static void usage(bool fail)
         "    -u <url>: URL to use for send functionality\n"
         "    -p <port>: port to use for send\n"
         "    -o <output_file>: use file instead of stdout\n"
+        "    -s: use settings for " "pastebin" /*garbage*/ ".stratumzero." /*garbage*/ "date\n"
         "    -n: don't strip HTTP header from response\n"
         "    -e: encrypt content: limited to 128KiB files\n"
         "    -d: debug\n"
@@ -55,7 +57,7 @@ int main (int argc, char **argv)
     int rv = EXIT_SUCCESS;
 
     char *algo = NULL, *url_opt = NULL, *port_opt = NULL, *output_file = NULL;
-    bool no_strip = false, encrypt = false, debug = false;
+    bool no_strip = false, encrypt = false, debug = false, stratum = false;
 
     bool send = false, recv = false;
 
@@ -76,7 +78,7 @@ int main (int argc, char **argv)
     }
 
     int c;
-    while ((c = getopt(argc, argv, "a:u:p:o:nedh")) != -1) {
+    while ((c = getopt(argc, argv, "a:u:p:o:snedh")) != -1) {
         switch (c) {
             case 'a':
                 algo = optarg;
@@ -92,6 +94,10 @@ int main (int argc, char **argv)
                 break;
             case 'o':
                 output_file = optarg;
+                break;
+            case 's':
+                stratum = true;
+                url_opt = "https://" /*garbage*/ "pastebin" /*garbage*/ ".stratumzero." /*garbage*/ "date/" /*garbage*/ "upload";
                 break;
             case 'n':
                 no_strip = true;
@@ -154,6 +160,7 @@ int main (int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
+    bool using_stdin = false;
     char *url;
     if (recv) {
         if (argc != 2) {
@@ -165,7 +172,6 @@ int main (int argc, char **argv)
         }
         url = argv[1];
     } else if (send) {
-        bool using_stdin = false;
         if (argc > 2) {
             usage(true);
         } else if (argc == 2 && strcmp(argv[1], "-")) {
@@ -308,6 +314,7 @@ int main (int argc, char **argv)
 
     const int going_to_write = HEADER_MAX_LEN;
     char request[HEADER_MAX_LEN];
+    char footer[HEADER_MAX_LEN] = "";
     int written = 0;
     if (recv) {
         written = snprintf(
@@ -319,18 +326,58 @@ int main (int argc, char **argv)
             "\r\n",
             path, http_ver, link);
     } else if (send) {
+        char multipart[HEADER_MAX_LEN];
+        int multipart_written = 0;
+        if (stratum) {
+            #define PURR_BOUNDARY_MIN "----purr-boundary"
+            #define PURR_BOUNDARY "--" PURR_BOUNDARY_MIN "\r\n"
+
+            multipart_written = snprintf(
+                multipart, going_to_write,
+                "Content-Type: multipart/form-data; boundary=" PURR_BOUNDARY_MIN "\r\n"
+                "\r\n");
+            multipart_written = snprintf(
+                multipart + multipart_written, going_to_write - multipart_written,
+                PURR_BOUNDARY
+                "Content-Disposition: form-data; name=\"s\"\r\n"
+                "\r\n"
+                "1\r\n"
+                PURR_BOUNDARY
+                "Content-Disposition: form-data; name=\"o\"\r\n"
+                "\r\n"
+                "0\r\n"
+                PURR_BOUNDARY
+                "Content-Disposition: form-data; name=\"p\"; filename=\"%s\"\r\n"
+                "Content-Type: application/octet-stream\r\n"
+                "\r\n",
+                using_stdin ? "stream" : basename(argv[1]));
+
+            multipart_written += snprintf(footer, going_to_write, "\r\n--" PURR_BOUNDARY_MIN "\r\n");
+        }
+        if (multipart_written >= going_to_write) goto truncate_request;
+
         written = snprintf(
             request, going_to_write,
             "POST %s %s\r\n"
             "Host: %s\r\n"
             "Accept: */*\r\n"
-            "Content-Length: %lu\r\n" // required in most cases and good practice
-            "Content-Type: application/octet-stream\r\n" // can be any file type
-            "\r\n",
-            path, http_ver, link, input.size);
+            "Content-Length: %lu\r\n", // required in most cases and good practice
+            path, http_ver, link, input.size + multipart_written);
+
+        if (written < going_to_write) {
+            if (stratum) {
+                written += snprintf(request + written, going_to_write - written, "%s", multipart);
+            } else {
+                written += snprintf(
+                    request + written, going_to_write - written,
+                    "Content-Type: application/octet-stream\r\n"
+                    "\r\n");
+            }
+        }
     }
 
     if (written >= going_to_write) {
+truncate_request:
         fputs(_("error: truncated request!\n"), stderr);
         goto out;
     }
@@ -338,11 +385,18 @@ int main (int argc, char **argv)
         fputs("request header: -------------\n", stderr);
         fputs(request, stderr);
         fputs("-----------------------------\n", stderr);
+
+        if (footer[0]) {
+            fputs("request footer: -------------\n", stderr);
+            fputs(footer, stderr);
+            fputs("-----------------------------\n", stderr);
+        }
     }
 
     struct connection_information ci =
         {.ioc = &ioc, .sc = &sc,
          .request = request, .request_size = written,
+         .footer = footer, .footer_size = strlen(footer),
          .input = &input, .output = &output,
          .socket = socket,
          .send = send, .ssl = ssl,
@@ -405,7 +459,10 @@ int main (int argc, char **argv)
     free(key);
     free(iv);
   early_out:
-    if (output_print != stdout) fclose(output_print);
+	 // will be fclosed in free_mmap sometimes, figure out the leakage
+	 // if stdout, we don't want free_mmap to kill it, I think
+	 // but if not stdout, we don't want to have to worry about closing it either
+    //if (output_print != stdout) fclose(output_print);
     free_mmap(&input);
     free_mmap(&output);
 

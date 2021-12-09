@@ -40,8 +40,8 @@ typedef void (*header_callback_def)(int, const char *);
 struct connection_information {
     br_sslio_context *ioc;
     br_ssl_client_context *sc;
-    const char *request;
-    size_t request_size;
+    const char *request, *footer;
+    size_t request_size, footer_size;
     struct mmap_file *input, *output;
     int socket;
     bool send, ssl;
