@@ -221,9 +221,10 @@ int main (int argc, char **argv)
     }
 
     // clean up hash property, if present
-    char *hash_prop;
-    if (!encrypt && (hash_prop = strchr(path, '#'))) {
-        *hash_prop = 0;
+    if (!encrypt) {
+        char *hash_prop = strchr(path, '#');
+        if (hash_prop)
+            *hash_prop = 0;
     }
 
     uint8_t *key = NULL;
